@@ -6,12 +6,24 @@ import {
   ShieldCheck,
   Sparkles,
   TrendingUp,
+  Store,
+  HeartPulse,
+  Factory,
+  Sprout,
+  HandHeart,
+  Building2,
+  Building,
+  Utensils,
+  GraduationCap,
+  Cpu,
+  Truck,
+  Briefcase as BriefcaseIcon,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import AnimatedStats from '@/components/animated-stats';
-import { services, fallbackResources } from '@/lib/data';
+import { services, fallbackResources, fallbackBlogPosts } from '@/lib/data';
 
 const features = [
   {
@@ -36,90 +48,70 @@ const features = [
   },
 ];
 
+const industries = [
+  { icon: Store, name: 'Retail' },
+  { icon: HeartPulse, name: 'Healthcare' },
+  { icon: Factory, name: 'Manufacturing' },
+  { icon: Sprout, name: 'Agriculture' },
+  { icon: HandHeart, name: 'NGOs' },
+  { icon: Building2, name: 'Financial Services' },
+  { icon: Building, name: 'Real Estate' },
+  { icon: Utensils, name: 'Hospitality' },
+  { icon: GraduationCap, name: 'Education' },
+  { icon: Cpu, name: 'Technology' },
+  { icon: Truck, name: 'Logistics' },
+  { icon: BriefcaseIcon, name: 'Professional Services' },
+];
+
 export default function HomePage() {
   return (
     <main className="pt-16">
-        <section className="hero-bg">
-          <div className="relative mx-auto max-w-4xl px-4 py-32 sm:px-6 lg:px-8 text-center">
-            <Badge variant="secondary" className="mb-6 inline-flex bg-primary/10 text-primary">
-              Salesway Consulting
-            </Badge>
-            <h1 className="mx-auto max-w-4xl font-display hero-title text-primary-foreground">
-              Ready to turn strategy into sales?
-            </h1>
-            <p className="mx-auto mt-6 max-w-2xl hero-sub">
-              Let's uncover the opportunities holding your business back and build a practical roadmap that drives measurable growth.
-              Whether you're launching a startup or scaling an established company, Salesway Consulting is your trusted partner in sustainable success.
-            </p>
-            <div className="mt-10 flex items-center justify-center gap-4">
-              <Link href="/book">
-                <Button className="cta-primary">
-                  Schedule Your Free Consultation
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
-              <Link href="/#services">
-                <Button variant="outline" className="cta-outline">
-                  Explore Our Services
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </section>
-
-        <section className="py-20">
+        <section className="relative py-20 bg-gradient-to-br from-primary/5 via-background to-transparent">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="mx-auto max-w-2xl text-center">
-              <Badge variant="secondary" className="mb-4 bg-primary/10 text-primary">
-                Quick links
-              </Badge>
-              <h2 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-                Browse the page sections directly.
-              </h2>
-              <p className="mt-4 text-lg leading-8 text-muted-foreground">
-                Use the quick navigation cards to jump to About, Services, Resources, or Contact.
-              </p>
-            </div>
-            <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              {[
-                {
-                  title: 'About',
-                  description: 'See how Salesway Consulting works and who we are.',
-                  href: '/#about',
-                },
-                {
-                  title: 'Services',
-                  description: 'Discover the growth services we offer for your business.',
-                  href: '/#services',
-                },
-                {
-                  title: 'Resources',
-                  description: 'Download practical tools and guides to grow smarter.',
-                  href: '/#resources',
-                },
-                {
-                  title: 'Contact',
-                  description: 'Reach out for a free consultation and next-step plan.',
-                  href: '/#contact',
-                },
-              ].map((item) => (
-                <Link
-                  key={item.title}
-                  href={item.href}
-                  className="group block rounded-3xl border border-border/60 bg-card p-8 transition-shadow hover:shadow-xl"
-                >
-                  <h3 className="text-xl font-semibold text-foreground group-hover:text-primary">
-                    {item.title}
-                  </h3>
-                  <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                    {item.description}
-                  </p>
-                  <span className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-primary">
-                    Explore
-                    <ArrowRight className="h-4 w-4" />
-                  </span>
-                </Link>
-              ))}
+            <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
+              <div>
+                <Badge variant="secondary" className="mb-4 inline-flex bg-accent/10 text-accent">
+                  Salesway Consulting
+                </Badge>
+                <h1 className="font-display text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
+                  Grow Smarter. Sell More. <span className="text-accent">Scale With Confidence.</span>
+                </h1>
+                <p className="mt-6 text-lg leading-8 text-muted-foreground">
+                  Turn strategy into sales with hands-on implementation. We stay alongside your team until measurable results are achieved.
+                </p>
+                <div className="mt-10 flex flex-col gap-4 sm:flex-row">
+                  <Link href="/book">
+                    <Button className="gap-2 w-full sm:w-auto bg-accent text-accent-foreground hover:bg-accent/90">
+                      Book a Free Strategy Call
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                  <Link href="/#services">
+                    <Button variant="outline" className="gap-2 w-full sm:w-auto">
+                      Explore Our Services
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+              <div className="relative">
+                <div className="relative overflow-hidden rounded-2xl border border-border/60 shadow-2xl">
+                  <Image
+                    src="/images/a_generate_for_me_thre (1).jpeg"
+                    alt="Team meeting"
+                    width={800}
+                    height={600}
+                    className="h-full w-full object-cover"
+                  />
+                  <div className="absolute top-4 right-4 rounded-xl border border-white/70 bg-white/90 p-4 shadow-lg backdrop-blur-xl">
+                    <p className="text-sm font-semibold text-primary">Hands-on implementation</p>
+                  </div>
+                  <div className="absolute bottom-4 left-4 rounded-xl border border-accent/70 bg-accent/90 p-4 shadow-lg backdrop-blur-xl">
+                    <p className="text-2xl font-bold text-accent-foreground">+40%</p>
+                    <p className="text-xs text-accent-foreground/90">Avg. sales growth</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -179,7 +171,7 @@ export default function HomePage() {
                 </div>
               </div>
 
-              <Link href="/#about" className="inline-flex items-center gap-2 text-sm font-medium text-primary">
+              <Link href="/about" className="inline-flex items-center gap-2 text-sm font-medium text-primary">
                 Meet the founder, Rachel Waithera
                 <ArrowRight className="h-4 w-4" />
               </Link>
@@ -187,7 +179,7 @@ export default function HomePage() {
 
             <div className="relative overflow-hidden rounded-[2rem] border border-border/50 bg-slate-50 shadow-2xl">
               <Image
-                src="/images/IMG-20260804-WA0001.jpg"
+                src="/images/b_generate_for_me_thre.png"
                 alt="Sales consultation meeting"
                 width={1080}
                 height={720}
@@ -196,6 +188,38 @@ export default function HomePage() {
               <div className="absolute bottom-6 left-6 rounded-[1.5rem] border border-white/70 bg-white/90 p-5 shadow-xl backdrop-blur-xl">
                 <p className="text-sm uppercase tracking-[0.24em] text-slate-500">We work with you, not just for you.</p>
               </div>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <AnimatedStats />
+        </section>
+
+        <section className="py-20">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="mx-auto max-w-2xl text-center">
+              <Badge variant="secondary" className="mb-4 bg-primary/10 text-primary">
+                Industries We Serve
+              </Badge>
+              <h2 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+                Sector expertise that speaks your language
+              </h2>
+              <p className="mt-4 text-lg leading-8 text-muted-foreground">
+                We have delivered results across twelve industries and counting.
+              </p>
+            </div>
+            <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {industries.map((industry) => (
+                <Card key={industry.name} className="border-border/60 bg-card p-6 text-center transition-all hover:border-primary/30 hover:shadow-md">
+                  <CardContent className="space-y-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent/10 text-accent mx-auto">
+                      <industry.icon className="h-6 w-6" />
+                    </div>
+                    <h3 className="font-semibold text-foreground">{industry.name}</h3>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </div>
         </section>
@@ -240,8 +264,48 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section>
-          <AnimatedStats />
+        <section id="blog" className="py-20">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="mx-auto max-w-2xl text-center">
+              <Badge variant="secondary" className="mb-4 bg-primary/10 text-primary">
+                Latest from the Blog
+              </Badge>
+              <h2 className="font-display text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+                Insights to grow your business
+              </h2>
+              <p className="mt-4 text-lg leading-8 text-muted-foreground">
+                Practical tips, frameworks, and strategies from our team.
+              </p>
+            </div>
+            <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {fallbackBlogPosts.slice(0, 3).map((post) => (
+                <Link key={post.slug} href={`/blog/${post.slug}`}>
+                  <Card className="border-border/60 bg-card p-6 h-full transition-all hover:border-primary/30 hover:shadow-md">
+                    <CardContent className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="bg-accent/10 text-accent text-xs">
+                          {post.category}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">{post.reading_minutes} min read</span>
+                      </div>
+                      <h3 className="font-semibold text-foreground line-clamp-2">{post.title}</h3>
+                      <p className="text-sm leading-relaxed text-muted-foreground line-clamp-3">{post.excerpt}</p>
+                      <div className="pt-2">
+                        <span className="text-sm font-semibold text-primary hover:text-primary/80">
+                          Read more
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+            <div className="mt-8 text-center">
+              <Link href="/blog" className="text-sm font-semibold text-primary hover:text-primary/80">
+                View all posts
+              </Link>
+            </div>
+          </div>
         </section>
 
         <section id="resources" className="py-20">

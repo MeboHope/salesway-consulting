@@ -80,7 +80,7 @@ export default function AboutPage() {
                 { value: '98%', label: 'Client satisfaction' },
                 { value: '12+', label: 'Years of experience' },
               ].map((stat) => (
-                <div key={stat.label} className="rounded-xl border border-border/60 bg-transparent p-6 text-center">
+                <div key={stat.label} className="rounded-xl border border-border/60 bg-muted p-6 text-center">
                   <div className="font-display text-3xl font-bold text-primary">{stat.value}</div>
                   <div className="mt-1 text-sm text-muted-foreground">{stat.label}</div>
                 </div>
