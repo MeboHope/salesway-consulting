@@ -9,6 +9,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useAuth } from '@/lib/auth-context';
 
+const AUTHORIZED_ADMIN_EMAIL = process.env.NEXT_PUBLIC_AUTHORIZED_ADMIN_EMAIL || 'admin@saleswayconsulting.com';
+
 export default function AdminLoginPage() {
   const router = useRouter();
   const { user, loading, signIn } = useAuth();
