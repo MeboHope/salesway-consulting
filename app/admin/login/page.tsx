@@ -9,15 +9,19 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useAuth } from '@/lib/auth-context';
 
-const AUTHORIZED_ADMIN_EMAIL = process.env.NEXT_PUBLIC_AUTHORIZED_ADMIN_EMAIL || 'admin@saleswayconsulting.com';
+const AUTHORIZED_ADMIN_EMAILS = (process.env.NEXT_PUBLIC_AUTHORIZED_ADMIN_EMAILS || 'admin@saleswayconsulting.com')
+  .split(',')
+  .map(email => email.trim())
+  .filter(email => email.length > 0);
 
 export default function AdminLoginPage() {
   const router = useRouter();
-  const { user, loading, signIn } = useAuth();
+  const { user, loading, signIn, signUp } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
 
   useEffect(() => {
     if (!loading && user) {
@@ -30,15 +34,18 @@ export default function AdminLoginPage() {
     setSubmitting(true);
     setError('');
 
-    if (email !== AUTHORIZED_ADMIN_EMAIL) {
+    if (!AUTHORIZED_ADMIN_EMAILS.includes(email)) {
       setError('This email is not authorized to access the admin panel.');
       setSubmitting(false);
       return;
     }
 
-    const { error: signInError } = await signIn(email, password);
-    if (signInError) {
-      setError(signInError);
+    const { error } = isSignUp
+      ? await signUp(email, password)
+      : await signIn(email, password);
+
+    if (error) {
+      setError(error);
       setSubmitting(false);
       return;
     }
@@ -108,9 +115,16 @@ export default function AdminLoginPage() {
             )}
             <Button type="submit" disabled={submitting} className="w-full gap-2" size="lg">
               {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-              {submitting ? 'Signing in...' : 'Sign In'}
+              {submitting ? (isSignUp ? 'Creating account...' : 'Signing in...') : (isSignUp ? 'Create Account' : 'Sign In')}
               {!submitting && <ArrowRight className="h-4 w-4" />}
             </Button>
+            <button
+              type="button"
+              onClick={() => setIsSignUp(!isSignUp)}
+              className="text-sm text-primary hover:underline"
+            >
+              {isSignUp ? 'Already have an account? Sign in' : 'Need to create an account? Sign up'}
+            </button>
           </form>
         </CardContent>
       </Card>
