@@ -20,6 +20,11 @@ const navItems = [
   { href: '/admin/faqs', label: 'FAQs', icon: HelpCircle },
   { href: '/admin/consultations', label: 'Consultations', icon: CalendarCheck },
   { href: '/admin/subscribers', label: 'Subscribers', icon: Mail },
+  { href: '/admin/case-studies', label: 'Case Studies', icon: Briefcase },
+  { href: '/admin/team', label: 'Team', icon: LayoutDashboard },
+  { href: '/admin/clients', label: 'Clients', icon: Star },
+  { href: '/admin/pricing', label: 'Pricing', icon: Download },
+  { href: '/admin/careers', label: 'Careers', icon: Briefcase },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
 ];
 
@@ -35,13 +40,13 @@ export function AdminSidebar() {
   };
 
   const sidebar = (
-    <aside className="fixed left-0 top-0 z-40 h-full w-64 border-r border-border bg-card">
-      <div className="flex h-16 items-center border-b border-border px-6">
+    <aside className="fixed left-0 top-0 z-40 h-full w-64 border-r border-border/60 bg-gradient-to-b from-card to-card/95 backdrop-blur-sm">
+      <div className="flex h-16 items-center border-b border-border/60 px-6">
         <Link href="/admin" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-display font-bold">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground font-display font-bold shadow-md">
             S
           </div>
-          <span className="font-display font-bold">Admin Panel</span>
+          <span className="font-display font-bold text-foreground">Salesway Admin</span>
         </Link>
       </div>
       <nav className="space-y-1 p-4">
@@ -53,10 +58,10 @@ export function AdminSidebar() {
               href={item.href}
               onClick={() => setMobileOpen(false)}
               className={cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+                'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all',
                 isActive
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+                  ? 'bg-gradient-to-r from-primary/10 to-accent/10 text-primary border border-primary/20 shadow-sm'
+                  : 'text-muted-foreground hover:bg-gradient-to-r hover:from-primary/5 hover:to-accent/5 hover:text-foreground'
               )}
             >
               <item.icon className="h-4 w-4" />
@@ -65,17 +70,17 @@ export function AdminSidebar() {
           );
         })}
       </nav>
-      <div className="absolute bottom-0 left-0 right-0 space-y-1 border-t border-border p-4">
+      <div className="absolute bottom-0 left-0 right-0 space-y-1 border-t border-border/60 p-4 bg-gradient-to-t from-card/50 to-transparent">
         <Link
           href="/"
-          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+          className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-all hover:bg-gradient-to-r hover:from-primary/5 hover:to-accent/5 hover:text-foreground"
         >
           <ExternalLink className="h-4 w-4" />
           View Website
         </Link>
         <button
           onClick={handleSignOut}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10"
+          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-destructive transition-all hover:bg-destructive/10"
         >
           <LogOut className="h-4 w-4" />
           Sign Out

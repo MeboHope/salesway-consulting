@@ -67,11 +67,11 @@ export default function AdminDashboardPage() {
   }, []);
 
   return (
-    <div className="flex min-h-screen bg-secondary/30">
+    <div className="flex min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
       <AdminSidebar />
       <main className="flex-1 lg:ml-64 p-6 sm:p-8 lg:p-10">
         <div className="space-y-6">
-          <div className="rounded-3xl border border-border/60 bg-card p-8 shadow-sm">
+          <div className="rounded-3xl border border-border/60 bg-gradient-to-br from-card to-card/50 backdrop-blur-sm p-8 shadow-lg">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">Admin dashboard</p>
@@ -84,7 +84,7 @@ export default function AdminDashboardPage() {
                 </p>
               </div>
               <Link href="/admin/settings">
-                <Button className="gap-2">
+                <Button className="gap-2 bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90">
                   <Settings className="h-4 w-4" />
                   Settings
                 </Button>
@@ -93,7 +93,7 @@ export default function AdminDashboardPage() {
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">
-            <Card className="border-border/60 p-6">
+            <Card className="border-border/60 bg-gradient-to-br from-card to-card/50 p-6 shadow-sm hover:shadow-md transition-shadow">
               <CardContent className="space-y-4 p-0">
                 <div className="flex items-center gap-3 text-primary">
                   <FileText className="h-5 w-5" />
@@ -103,7 +103,7 @@ export default function AdminDashboardPage() {
                 <p className="text-sm text-muted-foreground">Total published and draft articles.</p>
               </CardContent>
             </Card>
-            <Card className="border-border/60 p-6">
+            <Card className="border-border/60 bg-gradient-to-br from-card to-card/50 p-6 shadow-sm hover:shadow-md transition-shadow">
               <CardContent className="space-y-4 p-0">
                 <div className="flex items-center gap-3 text-primary">
                   <Briefcase className="h-5 w-5" />
@@ -113,7 +113,7 @@ export default function AdminDashboardPage() {
                 <p className="text-sm text-muted-foreground">Current service offerings live on the site.</p>
               </CardContent>
             </Card>
-            <Card className="border-border/60 p-6">
+            <Card className="border-border/60 bg-gradient-to-br from-card to-card/50 p-6 shadow-sm hover:shadow-md transition-shadow">
               <CardContent className="space-y-4 p-0">
                 <div className="flex items-center gap-3 text-primary">
                   <Download className="h-5 w-5" />
@@ -126,7 +126,7 @@ export default function AdminDashboardPage() {
           </div>
 
           <div className="grid gap-6 lg:grid-cols-2">
-            <Card className="border-border/60 p-6">
+            <Card className="border-border/60 bg-gradient-to-br from-card to-card/50 p-6 shadow-sm hover:shadow-md transition-shadow">
               <CardContent className="space-y-4 p-0">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3 text-primary">
@@ -144,7 +144,7 @@ export default function AdminDashboardPage() {
                     <p className="text-sm text-muted-foreground">No recent posts yet.</p>
                   ) : (
                     recentPosts.map((post) => (
-                      <div key={post.id} className="rounded-lg border border-border/60 bg-secondary p-4">
+                      <div key={post.id} className="rounded-xl border border-border/60 bg-gradient-to-r from-primary/5 to-accent/5 p-4">
                         <div className="flex items-center justify-between gap-3">
                           <h3 className="font-medium">{post.title}</h3>
                           <Badge variant={post.status === 'published' ? 'default' : 'secondary'}>
@@ -159,7 +159,7 @@ export default function AdminDashboardPage() {
               </CardContent>
             </Card>
 
-            <Card className="border-border/60 p-6">
+            <Card className="border-border/60 bg-gradient-to-br from-card to-card/50 p-6 shadow-sm hover:shadow-md transition-shadow">
               <CardContent className="space-y-4 p-0">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3 text-primary">
@@ -177,7 +177,7 @@ export default function AdminDashboardPage() {
                     <p className="text-sm text-muted-foreground">No recent resources yet.</p>
                   ) : (
                     recentResources.map((resource) => (
-                      <div key={resource.id} className="rounded-lg border border-border/60 bg-secondary p-4">
+                      <div key={resource.id} className="rounded-xl border border-border/60 bg-gradient-to-r from-primary/5 to-accent/5 p-4">
                         <h3 className="font-medium">{resource.title}</h3>
                         <p className="text-xs text-muted-foreground">{new Date(resource.created_at).toLocaleString()}</p>
                       </div>
@@ -192,7 +192,7 @@ export default function AdminDashboardPage() {
             {adminSections.map((section) => {
               const Icon = section.icon;
               return (
-                <Card key={section.href} className="border-border/60 p-6">
+                <Card key={section.href} className="border-border/60 bg-gradient-to-br from-card to-card/50 p-6 shadow-sm hover:shadow-md transition-shadow">
                   <CardContent className="space-y-4 p-0">
                     <div className="flex items-center gap-3 text-primary">
                       <Icon className="h-5 w-5" />
@@ -200,7 +200,7 @@ export default function AdminDashboardPage() {
                     </div>
                     <p className="text-sm text-muted-foreground">{section.description}</p>
                     <Link href={section.href}>
-                      <Button variant="secondary" className="mt-4">Open</Button>
+                      <Button variant="secondary" className="mt-4 w-full">Open</Button>
                     </Link>
                   </CardContent>
                 </Card>
