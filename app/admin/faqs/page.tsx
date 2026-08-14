@@ -10,7 +10,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/lib/supabase';
 
-type Faq = { id: string; question: string; answer: string; sort_order: number; is_published: boolean };
+type Faq = { id: string; question: string; answer: string; category: string; order: number; is_published: boolean };
 
 export default function AdminFaqsPage() {
   const [faqs, setFaqs] = useState<Faq[]>([]);
@@ -18,12 +18,12 @@ export default function AdminFaqsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ question: '', answer: '', sort_order: 0, is_published: true });
+  const [form, setForm] = useState({ question: '', answer: '', category: 'General', order: 0, is_published: true });
 
   useEffect(() => { loadFaqs(); }, []);
 
   const loadFaqs = async () => {
-    const { data } = await supabase.from('faqs').select('*').order('sort_order', { ascending: true });
+    const { data } = await supabase.from('faqs').select('*').order('order', { ascending: true });
     setFaqs(data || []);
     setLoading(false);
   };
@@ -39,13 +39,13 @@ export default function AdminFaqsPage() {
     setSaving(false);
     setShowForm(false);
     setEditingId(null);
-    setForm({ question: '', answer: '', sort_order: 0, is_published: true });
+    setForm({ question: '', answer: '', category: 'General', order: 0, is_published: true });
     loadFaqs();
   };
 
   const handleEdit = (f: Faq) => {
     setEditingId(f.id);
-    setForm({ question: f.question, answer: f.answer, sort_order: f.sort_order, is_published: f.is_published });
+    setForm({ question: f.question, answer: f.answer, category: f.category || 'General', order: f.order, is_published: f.is_published });
     setShowForm(true);
   };
 
@@ -62,7 +62,7 @@ export default function AdminFaqsPage() {
           <h1 className="font-display text-2xl font-bold tracking-tight">FAQs</h1>
           <p className="mt-1 text-muted-foreground">Manage frequently asked questions.</p>
         </div>
-        <Button className="gap-2" onClick={() => { setShowForm(!showForm); setEditingId(null); setForm({ question: '', answer: '', sort_order: 0, is_published: true }); }}>
+        <Button className="gap-2" onClick={() => { setShowForm(!showForm); setEditingId(null); setForm({ question: '', answer: '', category: 'General', order: 0, is_published: true }); }}>
           <Plus className="h-4 w-4" /> Add FAQ
         </Button>
       </div>
@@ -73,8 +73,9 @@ export default function AdminFaqsPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2"><Label htmlFor="question">Question *</Label><Input id="question" required value={form.question} onChange={(e) => setForm({ ...form, question: e.target.value })} /></div>
               <div className="space-y-2"><Label htmlFor="answer">Answer *</Label><Textarea id="answer" required rows={3} value={form.answer} onChange={(e) => setForm({ ...form, answer: e.target.value })} /></div>
+              <div className="space-y-2"><Label htmlFor="category">Category *</Label><Input id="category" required value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} /></div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2"><Label htmlFor="sort_order">Sort Order</Label><Input id="sort_order" type="number" value={form.sort_order} onChange={(e) => setForm({ ...form, sort_order: Number(e.target.value) })} /></div>
+                <div className="space-y-2"><Label htmlFor="order">Order</Label><Input id="order" type="number" value={form.order} onChange={(e) => setForm({ ...form, order: Number(e.target.value) })} /></div>
                 <div className="flex items-end gap-2 pb-2"><Checkbox id="pub" checked={form.is_published} onCheckedChange={(v) => setForm({ ...form, is_published: v === true })} /><Label htmlFor="pub">Published</Label></div>
               </div>
               <div className="flex gap-2">

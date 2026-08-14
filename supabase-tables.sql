@@ -75,25 +75,51 @@ CREATE TABLE IF NOT EXISTS faqs (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Subscribers Table (Original)
-CREATE TABLE IF NOT EXISTS subscribers (
+-- Newsletter Subscribers Table (Original)
+CREATE TABLE IF NOT EXISTS newsletter_subscribers (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL,
   email TEXT NOT NULL UNIQUE,
-  status TEXT DEFAULT 'active',
+  consent BOOLEAN DEFAULT false,
+  confirmed BOOLEAN DEFAULT false,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Consultations Table (Original)
-CREATE TABLE IF NOT EXISTS consultations (
+-- Consultation Requests Table (Original)
+CREATE TABLE IF NOT EXISTS consultation_requests (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  full_name TEXT NOT NULL,
+  company TEXT,
+  email TEXT NOT NULL,
+  phone TEXT,
+  business_size TEXT,
+  industry TEXT,
+  services_needed TEXT[] DEFAULT '{}',
+  preferred_date DATE,
+  preferred_time TEXT,
+  message TEXT,
+  status TEXT DEFAULT 'new',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Contact Messages Table (Original)
+CREATE TABLE IF NOT EXISTS contact_messages (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL,
   email TEXT NOT NULL,
-  company TEXT,
-  phone TEXT,
-  service_interest TEXT,
-  message TEXT,
-  status TEXT DEFAULT 'pending',
+  subject TEXT,
+  message TEXT NOT NULL,
+  status TEXT DEFAULT 'new',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Admin Roles Table (For role-based access control)
+CREATE TABLE IF NOT EXISTS admin_roles (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  email TEXT NOT NULL UNIQUE,
+  role TEXT NOT NULL DEFAULT 'admin', -- 'super_admin' or 'admin'
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Case Studies Table (New)
@@ -177,8 +203,10 @@ ALTER TABLE services ENABLE ROW LEVEL SECURITY;
 ALTER TABLE resources ENABLE ROW LEVEL SECURITY;
 ALTER TABLE testimonials ENABLE ROW LEVEL SECURITY;
 ALTER TABLE faqs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE subscribers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE consultations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE newsletter_subscribers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE consultation_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE contact_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE admin_roles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE case_studies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE team_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE clients ENABLE ROW LEVEL SECURITY;
@@ -219,12 +247,23 @@ CREATE POLICY "Authenticated users can insert faqs" ON faqs FOR INSERT WITH CHEC
 CREATE POLICY "Authenticated users can update faqs" ON faqs FOR UPDATE USING (auth.role() = 'authenticated');
 CREATE POLICY "Authenticated users can delete faqs" ON faqs FOR DELETE USING (auth.role() = 'authenticated');
 
-CREATE POLICY "Authenticated users can insert subscribers" ON subscribers FOR INSERT WITH CHECK (auth.role() = 'authenticated');
-CREATE POLICY "Authenticated users can delete subscribers" ON subscribers FOR DELETE USING (auth.role() = 'authenticated');
+CREATE POLICY "Authenticated users can insert newsletter subscribers" ON newsletter_subscribers FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Authenticated users can delete newsletter subscribers" ON newsletter_subscribers FOR DELETE USING (auth.role() = 'authenticated');
 
-CREATE POLICY "Authenticated users can insert consultations" ON consultations FOR INSERT WITH CHECK (auth.role() = 'authenticated');
-CREATE POLICY "Authenticated users can update consultations" ON consultations FOR UPDATE USING (auth.role() = 'authenticated');
-CREATE POLICY "Authenticated users can delete consultations" ON consultations FOR DELETE USING (auth.role() = 'authenticated');
+CREATE POLICY "Authenticated users can insert consultation requests" ON consultation_requests FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Authenticated users can update consultation requests" ON consultation_requests FOR UPDATE USING (auth.role() = 'authenticated');
+CREATE POLICY "Authenticated users can delete consultation requests" ON consultation_requests FOR DELETE USING (auth.role() = 'authenticated');
+
+CREATE POLICY "Authenticated users can insert contact messages" ON contact_messages FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Authenticated users can update contact messages" ON contact_messages FOR UPDATE USING (auth.role() = 'authenticated');
+CREATE POLICY "Authenticated users can delete contact messages" ON contact_messages FOR DELETE USING (auth.role() = 'authenticated');
+
+CREATE POLICY "Super admins can manage admin roles" ON admin_roles FOR ALL USING (
+  EXISTS (
+    SELECT 1 FROM admin_roles 
+    WHERE email = auth.email() AND role = 'super_admin'
+  )
+);
 
 CREATE POLICY "Authenticated users can insert case studies" ON case_studies FOR INSERT WITH CHECK (auth.role() = 'authenticated');
 CREATE POLICY "Authenticated users can update case studies" ON case_studies FOR UPDATE USING (auth.role() = 'authenticated');
@@ -249,6 +288,7 @@ CREATE POLICY "Authenticated users can delete jobs" ON jobs FOR DELETE USING (au
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_blog_posts_slug ON blog_posts(slug);
 CREATE INDEX IF NOT EXISTS idx_blog_posts_status ON blog_posts(status);
+CREATE INDEX IF NOT EXISTS idx_blog_posts_category ON blog_posts(category);
 CREATE INDEX IF NOT EXISTS idx_services_slug ON services(slug);
 CREATE INDEX IF NOT EXISTS idx_services_published ON services(is_published);
 CREATE INDEX IF NOT EXISTS idx_resources_slug ON resources(slug);
@@ -289,6 +329,9 @@ CREATE TRIGGER update_testimonials_updated_at BEFORE UPDATE ON testimonials
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_faqs_updated_at BEFORE UPDATE ON faqs
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_admin_roles_updated_at BEFORE UPDATE ON admin_roles
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_case_studies_updated_at BEFORE UPDATE ON case_studies

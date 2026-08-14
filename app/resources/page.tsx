@@ -64,14 +64,29 @@ export default function ResourcesPage() {
     const email = formData.get('email') as string;
     const name = formData.get('name') as string;
 
-    await supabase.from('newsletter_subscribers').insert({
-      email,
-      name,
-      consent: true,
-      confirmed: false,
-    });
+    try {
+      const response = await fetch('/api/resources/unlock', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, name, resourceId: activeResource.id }),
+      });
 
-    setEmailStatus('success');
+      const data = await response.json();
+
+      if (response.ok) {
+        setEmailStatus('success');
+        // Store download link for the active resource
+        setActiveResource({ ...activeResource, downloadLink: data.downloadLink } as Resource & { downloadLink?: string });
+      } else {
+        console.error('Error unlocking resource:', data.error);
+        alert('Failed to unlock resource. Please try again.');
+        setEmailStatus('idle');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Failed to unlock resource. Please try again.');
+      setEmailStatus('idle');
+    }
   };
 
   return (
@@ -187,7 +202,15 @@ export default function ResourcesPage() {
                                   <CheckCircle2 className="h-6 w-6" />
                                 </div>
                                 <p className="font-medium">You&apos;re unlocked!</p>
-                                <Button className="gap-2 w-full">
+                                <Button
+                                  className="gap-2 w-full"
+                                  onClick={() => {
+                                    const downloadLink = (activeResource as any).downloadLink;
+                                    if (downloadLink) {
+                                      window.open(downloadLink, '_blank');
+                                    }
+                                  }}
+                                >
                                   <Download className="h-4 w-4" />
                                   Download Now
                                 </Button>

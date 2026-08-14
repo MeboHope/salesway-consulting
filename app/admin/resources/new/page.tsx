@@ -26,9 +26,12 @@ export default function NewResourcePage() {
     title: '',
     slug: '',
     description: '',
-    category: '',
     file_url: '',
+    file_name: '',
+    file_size: 0,
     requires_email: true,
+    is_published: true,
+    order: 0,
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -42,10 +45,12 @@ export default function NewResourcePage() {
       title: form.title,
       slug,
       description: form.description,
-      category: form.category,
       file_url: form.file_url,
+      file_name: form.file_name,
+      file_size: form.file_size || null,
       requires_email: form.requires_email,
-      created_at: new Date().toISOString(),
+      is_published: form.is_published,
+      order: form.order,
     });
 
     if (insertError) {
@@ -97,21 +102,42 @@ export default function NewResourcePage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="category">Category</Label>
-              <Input
-                id="category"
-                value={form.category}
-                onChange={(e) => setForm({ ...form, category: e.target.value })}
-                placeholder="Strategy, Sales, Marketing, eBook"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="file_url">File URL</Label>
+              <Label htmlFor="file_url">File URL *</Label>
               <Input
                 id="file_url"
+                required
                 value={form.file_url}
                 onChange={(e) => setForm({ ...form, file_url: e.target.value })}
                 placeholder="/downloads/business-growth-checklist.pdf"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="file_name">File Name *</Label>
+              <Input
+                id="file_name"
+                required
+                value={form.file_name}
+                onChange={(e) => setForm({ ...form, file_name: e.target.value })}
+                placeholder="business-growth-checklist.pdf"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="file_size">File Size (bytes)</Label>
+              <Input
+                id="file_size"
+                type="number"
+                value={form.file_size}
+                onChange={(e) => setForm({ ...form, file_size: parseInt(e.target.value) || 0 })}
+                placeholder="1024000"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="order">Display Order</Label>
+              <Input
+                id="order"
+                type="number"
+                value={form.order}
+                onChange={(e) => setForm({ ...form, order: parseInt(e.target.value) || 0 })}
               />
             </div>
             <div className="flex items-center gap-2">
@@ -121,6 +147,14 @@ export default function NewResourcePage() {
                 onCheckedChange={(value) => setForm({ ...form, requires_email: value === true })}
               />
               <Label htmlFor="requires_email">Requires email to unlock</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="is_published"
+                checked={form.is_published}
+                onCheckedChange={(value) => setForm({ ...form, is_published: value === true })}
+              />
+              <Label htmlFor="is_published">Published</Label>
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
             <Button type="submit" disabled={saving} className="gap-2">
