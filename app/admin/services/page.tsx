@@ -9,14 +9,12 @@ import {
   Search,
   Briefcase,
   Eye,
-  Loader2,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-
 import { supabase } from '@/lib/supabase';
 
 type Service = {
@@ -24,18 +22,13 @@ type Service = {
   title: string;
   slug: string;
   summary: string;
-  details: string | null;
-  icon: string;
-  features: string[];
   is_published: boolean;
   created_at: string;
-  updated_at: string;
 };
 
 export default function AdminServicesPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
 
@@ -49,12 +42,11 @@ export default function AdminServicesPage() {
 
     const { data, error: fetchError } = await supabase
       .from('services')
-      .select(
-        'id, title, slug, summary, details, icon, features, is_published, created_at, updated_at'
-      )
+      .select('id, title, slug, summary, is_published, created_at')
       .order('created_at', { ascending: false });
 
     if (fetchError) {
+      console.error(fetchError);
       setError(fetchError.message);
       setServices([]);
     } else {
@@ -65,12 +57,7 @@ export default function AdminServicesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this service?')) {
-      return;
-    }
-
-    setDeletingId(id);
-    setError('');
+    if (!confirm('Are you sure you want to delete this service?')) return;
 
     const { error: deleteError } = await supabase
       .from('services')
@@ -79,24 +66,19 @@ export default function AdminServicesPage() {
 
     if (deleteError) {
       setError(deleteError.message);
-      setDeletingId(null);
       return;
     }
 
-    setServices((current) =>
-      current.filter((service) => service.id !== id)
-    );
-
-    setDeletingId(null);
+    await loadServices();
   };
 
   const filtered = services.filter((service) => {
-    const searchTerm = search.toLowerCase();
+    const query = search.toLowerCase();
 
     return (
-      service.title.toLowerCase().includes(searchTerm) ||
-      service.slug.toLowerCase().includes(searchTerm) ||
-      service.summary.toLowerCase().includes(searchTerm)
+      service.title.toLowerCase().includes(query) ||
+      service.slug.toLowerCase().includes(query) ||
+      service.summary.toLowerCase().includes(query)
     );
   });
 
@@ -133,16 +115,13 @@ export default function AdminServicesPage() {
       </div>
 
       {error && (
-        <Card className="border-destructive/50">
-          <CardContent className="pt-6">
-            <p className="text-sm text-destructive">{error}</p>
-          </CardContent>
-        </Card>
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+          {error}
+        </div>
       )}
 
       {loading ? (
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" />
+        <div className="animate-pulse text-muted-foreground">
           Loading services...
         </div>
       ) : filtered.length === 0 ? (
@@ -151,19 +130,15 @@ export default function AdminServicesPage() {
             <Briefcase className="mx-auto h-12 w-12 text-muted-foreground/50" />
 
             <p className="mt-4 text-muted-foreground">
-              {search
-                ? 'No services match your search.'
-                : 'No services found. Create your first service offering.'}
+              No services found.
             </p>
 
-            {!search && (
-              <Link href="/admin/services/new">
-                <Button className="mt-4 gap-2">
-                  <Plus className="h-4 w-4" />
-                  New Service
-                </Button>
-              </Link>
-            )}
+            <Link href="/admin/services/new">
+              <Button className="mt-4 gap-2">
+                <Plus className="h-4 w-4" />
+                New Service
+              </Button>
+            </Link>
           </CardContent>
         </Card>
       ) : (
@@ -171,8 +146,8 @@ export default function AdminServicesPage() {
           {filtered.map((service) => (
             <Card key={service.id} className="border-border/60">
               <CardContent className="pt-5">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="min-w-0 flex-1">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge
                         variant={
@@ -194,30 +169,21 @@ export default function AdminServicesPage() {
                     <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
                       {service.summary}
                     </p>
-
-                    {service.features?.length > 0 && (
-                      <p className="mt-2 text-xs text-muted-foreground">
-                        {service.features.length} feature
-                        {service.features.length === 1 ? '' : 's'}
-                      </p>
-                    )}
                   </div>
 
-                  <div className="flex shrink-0 gap-2">
-                    {service.is_published && (
-                      <Link
-                        href={`/services/${service.slug}`}
-                        target="_blank"
+                  <div className="flex flex-wrap gap-2">
+                    <Link
+                      href={`/services/${service.slug}`}
+                      target="_blank"
+                    >
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label="View service"
                       >
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          aria-label="View service"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </Link>
-                    )}
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </Link>
 
                     <Link href={`/admin/services/${service.id}`}>
                       <Button
@@ -233,15 +199,10 @@ export default function AdminServicesPage() {
                       variant="ghost"
                       size="icon"
                       onClick={() => handleDelete(service.id)}
-                      disabled={deletingId === service.id}
                       aria-label="Delete service"
                       className="text-destructive hover:text-destructive"
                     >
-                      {deletingId === service.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-4 w-4" />
-                      )}
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>

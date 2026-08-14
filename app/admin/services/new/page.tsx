@@ -2,13 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  Save,
-  ArrowLeft,
-  Loader2,
-  Plus,
-  X,
-} from 'lucide-react';
+import { Save, ArrowLeft, Loader2, Plus, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,7 +10,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-
 import { supabase } from '@/lib/supabase';
 
 function slugify(text: string) {
@@ -39,44 +32,40 @@ export default function NewServicePage() {
     summary: '',
     details: '',
     icon: 'Target',
-    features: [] as string[],
+    features: [''],
     is_published: true,
   });
 
-  const [featureInput, setFeatureInput] = useState('');
+  const updateFeature = (index: number, value: string) => {
+    const features = [...form.features];
+    features[index] = value;
+
+    setForm({
+      ...form,
+      features,
+    });
+  };
 
   const addFeature = () => {
-    const value = featureInput.trim();
-
-    if (!value) return;
-
-    if (form.features.includes(value)) {
-      setFeatureInput('');
-      return;
-    }
-
-    setForm((current) => ({
-      ...current,
-      features: [...current.features, value],
-    }));
-
-    setFeatureInput('');
+    setForm({
+      ...form,
+      features: [...form.features, ''],
+    });
   };
 
   const removeFeature = (index: number) => {
-    setForm((current) => ({
-      ...current,
-      features: current.features.filter((_, i) => i !== index),
-    }));
-  };
-
-  const handleFeatureKeyDown = (
-    e: React.KeyboardEvent<HTMLInputElement>
-  ) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      addFeature();
+    if (form.features.length === 1) {
+      setForm({
+        ...form,
+        features: [''],
+      });
+      return;
     }
+
+    setForm({
+      ...form,
+      features: form.features.filter((_, i) => i !== index),
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -85,22 +74,22 @@ export default function NewServicePage() {
     setSaving(true);
     setError('');
 
-    const slug = form.slug.trim() || slugify(form.title);
+    const title = form.title.trim();
 
-    if (!form.title.trim()) {
+    if (!title) {
       setError('Service title is required.');
       setSaving(false);
       return;
     }
 
-    if (!form.summary.trim()) {
-      setError('Service summary is required.');
-      setSaving(false);
-      return;
-    }
+    const slug = form.slug.trim() || slugify(title);
 
-    if (!slug) {
-      setError('Please provide a valid title or slug.');
+    const cleanedFeatures = form.features
+      .map((feature) => feature.trim())
+      .filter(Boolean);
+
+    if (cleanedFeatures.length === 0) {
+      setError('Please add at least one service feature.');
       setSaving(false);
       return;
     }
@@ -108,16 +97,17 @@ export default function NewServicePage() {
     const { error: insertError } = await supabase
       .from('services')
       .insert({
-        title: form.title.trim(),
+        title,
         slug,
         summary: form.summary.trim(),
         details: form.details.trim() || null,
         icon: form.icon.trim() || 'Target',
-        features: form.features,
+        features: cleanedFeatures,
         is_published: form.is_published,
       });
 
     if (insertError) {
+      console.error('Error creating service:', insertError);
       setError(insertError.message);
       setSaving(false);
       return;
@@ -131,9 +121,9 @@ export default function NewServicePage() {
     <div className="max-w-4xl space-y-6">
       <div className="flex items-center gap-4">
         <Button
-          type="button"
           variant="ghost"
           size="icon"
+          type="button"
           onClick={() => router.push('/admin/services')}
         >
           <ArrowLeft className="h-4 w-4" />
@@ -144,94 +134,111 @@ export default function NewServicePage() {
             New Service
           </h1>
 
-          <p className="text-sm text-muted-foreground">
-            Add a service to the Salesway Consulting website.
+          <p className="mt-1 text-sm text-muted-foreground">
+            Add a service that can be displayed on the website.
           </p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <Card className="border-border/60">
-          <CardContent className="space-y-5 pt-6">
+          <CardContent className="space-y-6 pt-6">
+
+            {/* Title */}
             <div className="space-y-2">
-              <Label htmlFor="title">Service Title *</Label>
+              <Label htmlFor="title">
+                Service Title *
+              </Label>
 
               <Input
                 id="title"
                 required
+                placeholder="Sales Performance Consulting"
                 value={form.title}
-                onChange={(e) =>
-                  setForm((current) => ({
-                    ...current,
-                    title: e.target.value,
-                    slug:
-                      current.slug ||
-                      slugify(e.target.value),
-                  }))
-                }
-                placeholder="Sales Strategy Consulting"
+                onChange={(e) => {
+                  const title = e.target.value;
+
+                  setForm({
+                    ...form,
+                    title,
+                    slug: slugify(title),
+                  });
+                }}
               />
+
+              <p className="text-xs text-muted-foreground">
+                The URL slug is generated automatically from the title.
+              </p>
             </div>
 
+            {/* Slug */}
             <div className="space-y-2">
-              <Label htmlFor="slug">URL Slug</Label>
+              <Label htmlFor="slug">
+                URL Slug
+              </Label>
 
               <Input
                 id="slug"
                 value={form.slug}
                 onChange={(e) =>
-                  setForm((current) => ({
-                    ...current,
-                    slug: e.target.value,
-                  }))
+                  setForm({
+                    ...form,
+                    slug: slugify(e.target.value),
+                  })
                 }
-                placeholder="sales-strategy-consulting"
               />
 
               <p className="text-xs text-muted-foreground">
-                Example: /services/sales-strategy-consulting
+                Example: sales-performance-consulting
               </p>
             </div>
 
+            {/* Summary */}
             <div className="space-y-2">
               <Label htmlFor="summary">
-                Short Summary *
+                Summary *
               </Label>
 
               <Textarea
                 id="summary"
                 required
                 rows={4}
+                placeholder="A short description of this service..."
                 value={form.summary}
                 onChange={(e) =>
-                  setForm((current) => ({
-                    ...current,
+                  setForm({
+                    ...form,
                     summary: e.target.value,
-                  }))
+                  })
                 }
-                placeholder="A concise description of what this service helps clients achieve."
               />
+
+              <p className="text-xs text-muted-foreground">
+                This is the main description displayed on the services page.
+              </p>
             </div>
 
+            {/* Details */}
             <div className="space-y-2">
               <Label htmlFor="details">
-                Full Details
+                Detailed Description
               </Label>
 
               <Textarea
                 id="details"
-                rows={8}
+                rows={7}
+                placeholder="Explain the service in more detail..."
                 value={form.details}
                 onChange={(e) =>
-                  setForm((current) => ({
-                    ...current,
+                  setForm({
+                    ...form,
                     details: e.target.value,
-                  }))
+                  })
                 }
-                placeholder="Provide the full description of this consulting service..."
               />
             </div>
 
+            {/* Icon */}
             <div className="space-y-2">
               <Label htmlFor="icon">
                 Icon
@@ -239,136 +246,134 @@ export default function NewServicePage() {
 
               <Input
                 id="icon"
+                placeholder="Target"
                 value={form.icon}
                 onChange={(e) =>
-                  setForm((current) => ({
-                    ...current,
+                  setForm({
+                    ...form,
                     icon: e.target.value,
-                  }))
+                  })
                 }
-                placeholder="Target"
               />
 
               <p className="text-xs text-muted-foreground">
-                Enter the Lucide icon name used by the website.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/60">
-          <CardContent className="space-y-5 pt-6">
-            <div>
-              <h3 className="font-display font-semibold">
-                Service Features
-              </h3>
-
-              <p className="mt-1 text-sm text-muted-foreground">
-                Add the key features or benefits included in this service.
+                Use a Lucide icon name such as Target, TrendingUp,
+                Megaphone, Users, Settings, or GraduationCap.
               </p>
             </div>
 
-            <div className="flex gap-2">
-              <Input
-                value={featureInput}
-                onChange={(e) =>
-                  setFeatureInput(e.target.value)
-                }
-                onKeyDown={handleFeatureKeyDown}
-                placeholder="Enter a feature..."
-              />
+            {/* Features */}
+            <div className="space-y-3">
+              <div>
+                <Label>
+                  Service Features *
+                </Label>
 
-              <Button
-                type="button"
-                variant="outline"
-                onClick={addFeature}
-                className="shrink-0 gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                Add
-              </Button>
-            </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Add the specific things included in this service.
+                </p>
+              </div>
 
-            {form.features.length > 0 && (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {form.features.map((feature, index) => (
                   <div
-                    key={`${feature}-${index}`}
-                    className="flex items-center justify-between rounded-md border p-3"
+                    key={index}
+                    className="flex items-center gap-2"
                   >
-                    <span className="text-sm">
-                      {feature}
-                    </span>
+                    <Input
+                      placeholder={`Feature ${index + 1}`}
+                      value={feature}
+                      onChange={(e) =>
+                        updateFeature(index, e.target.value)
+                      }
+                    />
 
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
                       onClick={() => removeFeature(index)}
-                      aria-label={`Remove ${feature}`}
+                      aria-label={`Remove feature ${index + 1}`}
                     >
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
                 ))}
               </div>
-            )}
-          </CardContent>
-        </Card>
 
-        <Card className="border-border/60">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={addFeature}
+              >
+                <Plus className="h-4 w-4" />
+                Add Feature
+              </Button>
+            </div>
+
+            {/* Published */}
+            <div className="flex items-center gap-3 rounded-lg border border-border/60 p-4">
               <Checkbox
                 id="is_published"
                 checked={form.is_published}
                 onCheckedChange={(value) =>
-                  setForm((current) => ({
-                    ...current,
+                  setForm({
+                    ...form,
                     is_published: value === true,
-                  }))
+                  })
                 }
               />
 
-              <Label htmlFor="is_published">
-                Publish this service immediately
-              </Label>
+              <div>
+                <Label htmlFor="is_published">
+                  Publish this service
+                </Label>
+
+                <p className="text-xs text-muted-foreground">
+                  Published services appear on the client website.
+                </p>
+              </div>
             </div>
-          </CardContent>
-        </Card>
 
-        {error && (
-          <div className="rounded-md border border-destructive/50 bg-destructive/5 p-3">
-            <p className="text-sm text-destructive">
-              {error}
-            </p>
-          </div>
-        )}
-
-        <div className="flex gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => router.push('/admin/services')}
-            disabled={saving}
-          >
-            Cancel
-          </Button>
-
-          <Button
-            type="submit"
-            disabled={saving}
-            className="gap-2"
-          >
-            {saving ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Save className="h-4 w-4" />
+            {/* Error */}
+            {error && (
+              <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+                <p className="text-sm text-destructive">
+                  {error}
+                </p>
+              </div>
             )}
 
-            {saving ? 'Saving...' : 'Save Service'}
-          </Button>
-        </div>
+            {/* Actions */}
+            <div className="flex gap-3">
+              <Button
+                type="submit"
+                disabled={saving}
+                className="gap-2"
+              >
+                {saving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+
+                {saving ? 'Saving...' : 'Save Service'}
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                disabled={saving}
+                onClick={() => router.push('/admin/services')}
+              >
+                Cancel
+              </Button>
+            </div>
+
+          </CardContent>
+        </Card>
       </form>
     </div>
   );
