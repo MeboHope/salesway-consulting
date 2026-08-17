@@ -1,283 +1,721 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Save, Trash2, Loader2 } from 'lucide-react';
+import {
+  ArrowLeft,
+  Save,
+  Trash2,
+  Loader2,
+  Upload,
+  FileText,
+  CheckCircle2,
+} from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
-
+import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/lib/supabase';
 
-export default function EditResourcePage() {
-  const router = useRouter();
-  const params = useParams();
+type Resource = {
+  id: string;
+  title: string;
+  slug: string;
+  description: string | null;
+  category: string | null;
+  file_url: string | null;
+  requires_email: boolean;
+  is_published: boolean;
+  created_at: string;
+};
 
-  const id = params.id as string;
+function createSlug(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+}
+
+function getFileNameFromUrl(url: string | null) {
+  if (!url) return null;
+
+  try {
+    const cleanUrl = url.split('?')[0];
+    const parts = cleanUrl.split('/');
+    return decodeURIComponent(parts[parts.length - 1] || '');
+  } catch {
+    return null;
+  }
+}
+
+export default function EditResourcePage() {
+  const params = useParams();
+  const router = useRouter();
+
+  const resourceId = useMemo(() => {
+    const value = params?.id;
+
+    if (Array.isArray(value)) {
+      return value[0] ?? '';
+    }
+
+    return value ? String(value) : '';
+  }, [params]);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
-  const [resource, setResource] = useState({
-    title: '',
-    slug: '',
-    description: '',
-    category: '',
-    file_url: '',
-    requires_email: true,
-    is_published: false,
-  });
+  const [title, setTitle] = useState('');
+  const [slug, setSlug] = useState('');
+  const [description, setDescription] = useState('');
+  const [category, setCategory] = useState('');
+  const [fileUrl, setFileUrl] = useState('');
+  const [requiresEmail, setRequiresEmail] = useState(true);
+  const [isPublished, setIsPublished] = useState(true);
 
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [originalFileUrl, setOriginalFileUrl] = useState<string | null>(null);
+
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
+
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  /*
+   * Load the existing resource.
+   */
   useEffect(() => {
+    if (!resourceId) return;
+
+    const loadResource = async () => {
+      setLoading(true);
+      setError('');
+
+      const { data, error: fetchError } = await supabase
+        .from('resources')
+        .select(
+          'id, title, slug, description, category, file_url, requires_email, is_published, created_at'
+        )
+        .eq('id', resourceId)
+        .maybeSingle();
+
+      if (fetchError) {
+        console.error('Resource loading error:', fetchError);
+        setError(`Could not load resource: ${fetchError.message}`);
+        setLoading(false);
+        return;
+      }
+
+      if (!data) {
+        setError('Resource not found.');
+        setLoading(false);
+        return;
+      }
+
+      const resource = data as Resource;
+
+      setTitle(resource.title || '');
+      setSlug(resource.slug || '');
+      setDescription(resource.description || '');
+      setCategory(resource.category || '');
+      setFileUrl(resource.file_url || '');
+      setOriginalFileUrl(resource.file_url || null);
+      setRequiresEmail(resource.requires_email ?? true);
+      setIsPublished(resource.is_published ?? true);
+
+      setLoading(false);
+    };
+
     loadResource();
-  }, []);
+  }, [resourceId]);
 
-  const loadResource = async () => {
-    const { data, error } = await supabase
+  /*
+   * Automatically generate slug from title.
+   *
+   * Once the admin manually changes the slug,
+   * we stop overwriting it.
+   */
+  useEffect(() => {
+    if (!slugManuallyEdited) {
+      setSlug(createSlug(title));
+    }
+  }, [title, slugManuallyEdited]);
+
+  /*
+   * Upload replacement file.
+   *
+   * IMPORTANT:
+   * The bucket must already exist in Supabase.
+   *
+   * This uses the same "resources" bucket used
+   * by the resource creation flow.
+   */
+  const uploadReplacementFile = async () => {
+    if (!selectedFile) {
+      return fileUrl || null;
+    }
+
+    const extension = selectedFile.name.includes('.')
+      ? selectedFile.name.substring(
+          selectedFile.name.lastIndexOf('.') + 1
+        )
+      : 'bin';
+
+    const safeSlug = createSlug(slug || title) || 'resource';
+
+    const filePath = `${safeSlug}-${Date.now()}.${extension}`;
+
+    const { error: uploadError } = await supabase.storage
       .from('resources')
-      .select('*')
-      .eq('id', id)
-      .single();
+      .upload(filePath, selectedFile, {
+        cacheControl: '3600',
+        upsert: false,
+      });
 
-    if (error || !data) {
-      router.push('/admin/resources');
+    if (uploadError) {
+      throw new Error(
+        `File upload failed: ${uploadError.message}`
+      );
+    }
+
+    const { data } = supabase.storage
+      .from('resources')
+      .getPublicUrl(filePath);
+
+    if (!data?.publicUrl) {
+      throw new Error(
+        'The file uploaded, but Supabase did not return a public URL.'
+      );
+    }
+
+    /*
+     * Remove the previous file after the replacement
+     * has successfully uploaded.
+     */
+    if (originalFileUrl) {
+      const oldFileName = getFileNameFromUrl(originalFileUrl);
+
+      if (oldFileName) {
+        await supabase.storage
+          .from('resources')
+          .remove([oldFileName]);
+      }
+    }
+
+    return data.publicUrl;
+  };
+
+  /*
+   * Save resource.
+   */
+  const handleSave = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!resourceId) {
+      setError('Resource ID is missing.');
       return;
     }
 
-    setResource({
-      title: data.title ?? '',
-      slug: data.slug ?? '',
-      description: data.description ?? '',
-      category: data.category ?? '',
-      file_url: data.file_url ?? '',
-      requires_email: data.requires_email ?? true,
-      is_published: data.is_published ?? false,
-    });
-
-    setLoading(false);
-  };
-
-
-  const handleSave = async () => {
     setSaving(true);
+    setError('');
+    setSuccess('');
 
-    const { error } = await supabase
-      .from('resources')
-      .update({
-        title: resource.title,
-        slug: resource.slug,
-        description: resource.description,
-        category: resource.category,
-        file_url: resource.file_url,
-        requires_email: resource.requires_email,
-        is_published: resource.is_published,
-      })
-      .eq('id', id);
+    try {
+      const cleanTitle = title.trim();
+      const cleanSlug = createSlug(slug || cleanTitle);
 
+      if (!cleanTitle) {
+        throw new Error('Please enter a resource title.');
+      }
 
-    setSaving(false);
+      if (!cleanSlug) {
+        throw new Error('Please enter a valid resource title or slug.');
+      }
 
-    if (!error) {
-      router.push('/admin/resources');
+      let finalFileUrl = fileUrl.trim() || null;
+
+      /*
+       * Upload replacement file only when
+       * the admin selected one.
+       */
+      if (selectedFile) {
+        finalFileUrl = await uploadReplacementFile();
+      }
+
+      /*
+       * IMPORTANT:
+       * There is intentionally NO updated_at here.
+       *
+       * Your resources table currently does not have
+       * an updated_at column.
+       */
+      const { data, error: updateError } = await supabase
+        .from('resources')
+        .update({
+          title: cleanTitle,
+          slug: cleanSlug,
+          description: description.trim() || null,
+          category: category.trim() || null,
+          file_url: finalFileUrl,
+          requires_email: requiresEmail,
+          is_published: isPublished,
+        })
+        .eq('id', resourceId)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error('Resource update error:', updateError);
+
+        /*
+         * If the slug already exists, give a useful message.
+         */
+        if (updateError.code === '23505') {
+          throw new Error(
+            'That slug is already being used by another resource. Please choose a different slug.'
+          );
+        }
+
+        throw new Error(
+          `Could not save resource: ${updateError.message}`
+        );
+      }
+
+      if (!data) {
+        throw new Error(
+          'The resource could not be saved.'
+        );
+      }
+
+      setFileUrl(finalFileUrl || '');
+      setOriginalFileUrl(finalFileUrl || null);
+      setSelectedFile(null);
+      setSlugManuallyEdited(true);
+
+      setSuccess('Resource updated successfully.');
+
+      /*
+       * Give the user a moment to see the success message,
+       * then return to the resource list.
+       */
+      setTimeout(() => {
+        router.push('/admin/resources');
+        router.refresh();
+      }, 700);
+    } catch (err) {
+      console.error('Save resource error:', err);
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Something went wrong while saving the resource.'
+      );
+    } finally {
+      setSaving(false);
     }
   };
 
-
+  /*
+   * Delete resource and associated file.
+   */
   const handleDelete = async () => {
-    const confirmDelete = confirm(
-      'Are you sure you want to delete this resource?'
+    if (!resourceId) return;
+
+    const confirmed = window.confirm(
+      'Are you sure you want to permanently delete this resource?'
     );
 
-    if (!confirmDelete) return;
+    if (!confirmed) return;
 
-    await supabase
-      .from('resources')
-      .delete()
-      .eq('id', id);
+    setDeleting(true);
+    setError('');
+    setSuccess('');
 
-    router.push('/admin/resources');
+    try {
+      /*
+       * Delete the database record first.
+       */
+      const { error: deleteError } = await supabase
+        .from('resources')
+        .delete()
+        .eq('id', resourceId);
+
+      if (deleteError) {
+        throw new Error(
+          `Could not delete resource: ${deleteError.message}`
+        );
+      }
+
+      /*
+       * Then remove its file from storage.
+       */
+      if (originalFileUrl) {
+        const fileName = getFileNameFromUrl(originalFileUrl);
+
+        if (fileName) {
+          const { error: storageError } =
+            await supabase.storage
+              .from('resources')
+              .remove([fileName]);
+
+          if (storageError) {
+            console.warn(
+              'Resource deleted but storage file could not be removed:',
+              storageError
+            );
+          }
+        }
+      }
+
+      router.push('/admin/resources');
+      router.refresh();
+    } catch (err) {
+      console.error('Delete resource error:', err);
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Something went wrong while deleting the resource.'
+      );
+
+      setDeleting(false);
+    }
   };
-
 
   if (loading) {
     return (
-      <div className="p-10 text-muted-foreground">
-        Loading resource...
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
-
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="mx-auto max-w-4xl space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <Link href="/admin/resources">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Back to resources"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+        </Link>
 
-      <Link
-        href="/admin/resources"
-        className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to resources
-      </Link>
-
-
-      <Card>
-        <CardHeader>
-          <CardTitle>
+        <div>
+          <h1 className="font-display text-2xl font-bold tracking-tight">
             Edit Resource
-          </CardTitle>
-        </CardHeader>
+          </h1>
 
-        <CardContent className="space-y-5">
+          <p className="mt-1 text-sm text-muted-foreground">
+            Update the resource information or replace its downloadable file.
+          </p>
+        </div>
+      </div>
 
-          <div className="space-y-2">
-            <Label>Title</Label>
-            <Input
-              value={resource.title}
-              onChange={(e) =>
-                setResource({
-                  ...resource,
-                  title: e.target.value,
-                })
-              }
-            />
-          </div>
+      {/* Error */}
+      {error && (
+        <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4">
+          <p className="text-sm font-medium text-destructive">
+            {error}
+          </p>
+        </div>
+      )}
 
+      {/* Success */}
+      {success && (
+        <div className="flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 p-4">
+          <CheckCircle2 className="h-5 w-5 text-primary" />
 
-          <div className="space-y-2">
-            <Label>Slug</Label>
-            <Input
-              value={resource.slug}
-              onChange={(e) =>
-                setResource({
-                  ...resource,
-                  slug: e.target.value,
-                })
-              }
-            />
-          </div>
+          <p className="text-sm font-medium text-primary">
+            {success}
+          </p>
+        </div>
+      )}
 
+      <form onSubmit={handleSave} className="space-y-6">
+        {/* Basic Information */}
+        <Card className="border-border/60">
+          <CardHeader>
+            <CardTitle>Resource Information</CardTitle>
+          </CardHeader>
 
-          <div className="space-y-2">
-            <Label>Description</Label>
-            <Textarea
-              rows={5}
-              value={resource.description}
-              onChange={(e) =>
-                setResource({
-                  ...resource,
-                  description: e.target.value,
-                })
-              }
-            />
-          </div>
+          <CardContent className="space-y-5">
+            {/* Title */}
+            <div className="space-y-2">
+              <Label htmlFor="title">
+                Resource Title
+              </Label>
 
+              <Input
+                id="title"
+                value={title}
+                onChange={(event) => {
+                  setTitle(event.target.value);
+                  setSlugManuallyEdited(false);
+                }}
+                placeholder="Business Growth Checklist"
+                required
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label>Category</Label>
-            <Input
-              value={resource.category}
-              onChange={(e) =>
-                setResource({
-                  ...resource,
-                  category: e.target.value,
-                })
-              }
-            />
-          </div>
+            {/* Slug */}
+            <div className="space-y-2">
+              <Label htmlFor="slug">
+                URL Slug
+              </Label>
 
+              <Input
+                id="slug"
+                value={slug}
+                onChange={(event) => {
+                  setSlug(
+                    createSlug(event.target.value)
+                  );
+                  setSlugManuallyEdited(true);
+                }}
+                placeholder="business-growth-checklist"
+                required
+              />
 
-          <div className="space-y-2">
-            <Label>File URL</Label>
-            <Input
-              value={resource.file_url}
-              onChange={(e) =>
-                setResource({
-                  ...resource,
-                  file_url: e.target.value,
-                })
-              }
-              placeholder="https://..."
-            />
-          </div>
+              <p className="text-xs text-muted-foreground">
+                URL:
+                {' '}
+                <span className="font-medium">
+                  /resources/{slug || 'your-resource'}
+                </span>
+              </p>
+            </div>
 
+            {/* Description */}
+            <div className="space-y-2">
+              <Label htmlFor="description">
+                Description
+              </Label>
 
-          <div className="flex items-center gap-3">
+              <Textarea
+                id="description"
+                value={description}
+                onChange={(event) =>
+                  setDescription(event.target.value)
+                }
+                placeholder="Describe what this resource helps the visitor accomplish..."
+                rows={5}
+                required
+              />
+            </div>
 
-            <Checkbox
-              checked={resource.requires_email}
-              onCheckedChange={(value) =>
-                setResource({
-                  ...resource,
-                  requires_email: Boolean(value),
-                })
-              }
-            />
+            {/* Category */}
+            <div className="space-y-2">
+              <Label htmlFor="category">
+                Category
+              </Label>
 
-            <Label>
-              Require email before download
-            </Label>
+              <Input
+                id="category"
+                value={category}
+                onChange={(event) =>
+                  setCategory(event.target.value)
+                }
+                placeholder="Strategy"
+              />
+            </div>
+          </CardContent>
+        </Card>
 
-          </div>
+        {/* File */}
+        <Card className="border-border/60">
+          <CardHeader>
+            <CardTitle>Downloadable File</CardTitle>
+          </CardHeader>
 
+          <CardContent className="space-y-5">
+            {/* Existing file */}
+            {fileUrl && (
+              <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-muted/30 p-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                  <FileText className="h-5 w-5 text-primary" />
+                </div>
 
-          <div className="flex items-center gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium">
+                    Current file
+                  </p>
 
-            <Checkbox
-              checked={resource.is_published}
-              onCheckedChange={(value) =>
-                setResource({
-                  ...resource,
-                  is_published: Boolean(value),
-                })
-              }
-            />
+                  <a
+                    href={fileUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block truncate text-xs text-primary hover:underline"
+                  >
+                    {getFileNameFromUrl(fileUrl) ||
+                      fileUrl}
+                  </a>
+                </div>
+              </div>
+            )}
 
-            <Label>
-              Published
-            </Label>
+            {/* Upload replacement */}
+            <div className="space-y-2">
+              <Label htmlFor="file">
+                Replace File
+              </Label>
 
-          </div>
+              <div className="rounded-xl border-2 border-dashed border-border/60 p-6 text-center">
+                <Upload className="mx-auto h-8 w-8 text-muted-foreground" />
 
+                <p className="mt-3 text-sm font-medium">
+                  {selectedFile
+                    ? selectedFile.name
+                    : 'Choose a replacement file'}
+                </p>
 
-          <div className="flex gap-3 pt-4">
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Leave empty to keep the current file.
+                </p>
 
-            <Button
-              onClick={handleSave}
-              disabled={saving}
-              className="gap-2"
-            >
-              {
-                saving &&
-                <Loader2 className="h-4 w-4 animate-spin" />
-              }
+                <Input
+                  id="file"
+                  type="file"
+                  className="mx-auto mt-4 max-w-md cursor-pointer"
+                  onChange={(event) => {
+                    const file =
+                      event.target.files?.[0] ?? null;
 
-              <Save className="h-4 w-4" />
+                    setSelectedFile(file);
+                  }}
+                />
+              </div>
+            </div>
 
-              Save Changes
-            </Button>
+            {/* Direct URL */}
+            <div className="space-y-2">
+              <Label htmlFor="fileUrl">
+                File URL
+              </Label>
 
+              <Input
+                id="fileUrl"
+                type="url"
+                value={fileUrl}
+                onChange={(event) =>
+                  setFileUrl(event.target.value)
+                }
+                placeholder="https://..."
+              />
 
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              className="gap-2"
-            >
+              <p className="text-xs text-muted-foreground">
+                You can use an existing public file URL. Selecting
+                a replacement file above will upload the new file
+                and replace this URL.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Access */}
+        <Card className="border-border/60">
+          <CardHeader>
+            <CardTitle>Access & Publishing</CardTitle>
+          </CardHeader>
+
+          <CardContent className="space-y-5">
+            <div className="flex items-center justify-between gap-4 rounded-xl border border-border/60 p-4">
+              <div>
+                <p className="font-medium">
+                  Require Email
+                </p>
+
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Visitors must provide their name and email before
+                  downloading.
+                </p>
+              </div>
+
+              <Switch
+                checked={requiresEmail}
+                onCheckedChange={setRequiresEmail}
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-4 rounded-xl border border-border/60 p-4">
+              <div>
+                <p className="font-medium">
+                  Published
+                </p>
+
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Published resources are visible on the public
+                  resources page.
+                </p>
+              </div>
+
+              <Switch
+                checked={isPublished}
+                onCheckedChange={setIsPublished}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Actions */}
+        <div className="flex flex-col-reverse gap-3 border-t border-border/60 pt-6 sm:flex-row sm:items-center sm:justify-between">
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={handleDelete}
+            disabled={saving || deleting}
+            className="gap-2"
+          >
+            {deleting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
               <Trash2 className="h-4 w-4" />
+            )}
 
-              Delete
+            {deleting
+              ? 'Deleting...'
+              : 'Delete Resource'}
+          </Button>
+
+          <div className="flex gap-3">
+            <Link href="/admin/resources">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={saving || deleting}
+              >
+                Cancel
+              </Button>
+            </Link>
+
+            <Button
+              type="submit"
+              disabled={saving || deleting}
+              className="gap-2"
+            >
+              {saving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4" />
+              )}
+
+              {saving
+                ? 'Saving...'
+                : 'Save Changes'}
             </Button>
-
           </div>
-
-        </CardContent>
-
-      </Card>
-
+        </div>
+      </form>
     </div>
   );
 }
