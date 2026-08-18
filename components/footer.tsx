@@ -66,7 +66,7 @@ export function Footer() {
             <div className="mt-6 space-y-2 text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
                 <Mail className="h-4 w-4 text-accent" />
-                cuteblueinteriors@gmail.com
+                saleswayconsulting@gmail.com
               </div>
               <div className="flex items-center gap-2">
                 <Phone className="h-4 w-4 text-accent" />

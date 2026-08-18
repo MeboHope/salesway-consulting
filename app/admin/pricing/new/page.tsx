@@ -2,19 +2,31 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Save, ArrowLeft, Loader2, Plus, X } from 'lucide-react';
+import Link from 'next/link';
+import {
+  ArrowLeft,
+  Loader2,
+  Plus,
+  Save,
+  Trash2,
+} from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+
 import { supabase } from '@/lib/supabase';
 
 export default function NewPricingPage() {
   const router = useRouter();
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
 
   const [form, setForm] = useState({
     name: '',
@@ -23,191 +35,359 @@ export default function NewPricingPage() {
     period: '',
     features: [''],
     is_popular: false,
-    is_published: false,
+    is_published: true,
     order: 0,
   });
 
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const updateField = (
+    field: keyof typeof form,
+    value: string | boolean | number
+  ) => {
+    setForm((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  };
+
   const addFeature = () => {
-    setForm({ ...form, features: [...form.features, ''] });
+    setForm((current) => ({
+      ...current,
+      features: [...current.features, ''],
+    }));
   };
 
   const removeFeature = (index: number) => {
-    setForm({ ...form, features: form.features.filter((_, i) => i !== index) });
+    setForm((current) => ({
+      ...current,
+      features:
+        current.features.length === 1
+          ? ['']
+          : current.features.filter(
+              (_, i) => i !== index
+            ),
+    }));
   };
 
-  const updateFeature = (index: number, value: string) => {
-    const newFeatures = [...form.features];
-    newFeatures[index] = value;
-    setForm({ ...form, features: newFeatures });
+  const updateFeature = (
+    index: number,
+    value: string
+  ) => {
+    setForm((current) => ({
+      ...current,
+      features: current.features.map(
+        (feature, i) =>
+          i === index ? value : feature
+      ),
+    }));
   };
 
-  const handleSubmit = async (e: React.FormEvent, publishStatus?: boolean) => {
-    e.preventDefault();
-    setSaving(true);
+  const handleSubmit = async (
+    event: React.FormEvent
+  ) => {
+    event.preventDefault();
+
     setError('');
 
-    const features = form.features.filter(f => f.trim() !== '');
+    const features = form.features
+      .map((feature) => feature.trim())
+      .filter(Boolean);
 
-    const payload = {
-      name: form.name,
-      description: form.description,
-      price: form.price,
-      period: form.period,
-      features,
-      is_popular: form.is_popular,
-      is_published: publishStatus !== undefined ? publishStatus : form.is_published,
-      order: Number(form.order) || 0,
-    };
+    if (!form.name.trim()) {
+      setError('Please enter the package name.');
+      return;
+    }
 
-    const { error: insertError } = await supabase.from('pricing_packages').insert(payload);
+    if (!form.description.trim()) {
+      setError('Please enter a description.');
+      return;
+    }
+
+    if (!form.price.trim()) {
+      setError('Please enter the price.');
+      return;
+    }
+
+    if (!form.period.trim()) {
+      setError('Please enter the billing period.');
+      return;
+    }
+
+    if (features.length === 0) {
+      setError('Please add at least one feature.');
+      return;
+    }
+
+    setSaving(true);
+
+    const { error: insertError } = await supabase
+      .from('pricing_packages')
+      .insert({
+        name: form.name.trim(),
+        description: form.description.trim(),
+        price: form.price.trim(),
+        period: form.period.trim(),
+        features,
+        is_popular: form.is_popular,
+        is_published: form.is_published,
+        order: form.order,
+      });
+
     if (insertError) {
+      console.error(
+        'Error creating pricing package:',
+        insertError
+      );
       setError(insertError.message);
       setSaving(false);
       return;
     }
 
     router.push('/admin/pricing');
+    router.refresh();
   };
 
   return (
-    <div className="space-y-6 max-w-4xl">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => router.push('/admin/pricing')}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <h1 className="font-display text-2xl font-bold tracking-tight">New Pricing Package</h1>
+    <div className="max-w-4xl space-y-6">
+      <div className="flex items-center gap-3">
+        <Link href="/admin/pricing">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        </Link>
+
+        <div>
+          <h1 className="font-display text-2xl font-bold">
+            New Pricing Package
+          </h1>
+
+          <p className="mt-1 text-muted-foreground">
+            Create a pricing package for the website.
+          </p>
+        </div>
       </div>
 
-      <form onSubmit={(e) => handleSubmit(e)} className="space-y-6">
-        <Card className="border-border/60">
-          <CardContent className="pt-6 space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>Package Details</CardTitle>
+        </CardHeader>
+
+        <CardContent>
+          <form
+            onSubmit={handleSubmit}
+            className="space-y-6"
+          >
             <div className="space-y-2">
-              <Label htmlFor="name">Package Name *</Label>
+              <Label htmlFor="name">
+                Package Name
+              </Label>
+
               <Input
                 id="name"
-                required
                 value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="Starter"
+                onChange={(e) =>
+                  updateField('name', e.target.value)
+                }
+                placeholder="Growth Package"
+                required
               />
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="description">Description *</Label>
+              <Label htmlFor="description">
+                Description
+              </Label>
+
               <Textarea
                 id="description"
-                required
-                rows={3}
                 value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                placeholder="Perfect for small businesses getting started..."
+                onChange={(e) =>
+                  updateField(
+                    'description',
+                    e.target.value
+                  )
+                }
+                rows={4}
+                required
               />
             </div>
-            <div className="grid gap-4 sm:grid-cols-3">
+
+            <div className="grid gap-6 sm:grid-cols-3">
               <div className="space-y-2">
-                <Label htmlFor="price">Price *</Label>
+                <Label htmlFor="price">
+                  Price
+                </Label>
+
                 <Input
                   id="price"
-                  required
                   value={form.price}
-                  onChange={(e) => setForm({ ...form, price: e.target.value })}
-                  placeholder="$999"
+                  onChange={(e) =>
+                    updateField(
+                      'price',
+                      e.target.value
+                    )
+                  }
+                  placeholder="KES 50,000"
+                  required
                 />
               </div>
+
               <div className="space-y-2">
-                <Label htmlFor="period">Period *</Label>
+                <Label htmlFor="period">
+                  Period
+                </Label>
+
                 <Input
                   id="period"
-                  required
                   value={form.period}
-                  onChange={(e) => setForm({ ...form, period: e.target.value })}
-                  placeholder="month"
+                  onChange={(e) =>
+                    updateField(
+                      'period',
+                      e.target.value
+                    )
+                  }
+                  placeholder="/ month"
+                  required
                 />
               </div>
+
               <div className="space-y-2">
-                <Label htmlFor="order">Display Order</Label>
+                <Label htmlFor="order">
+                  Display Order
+                </Label>
+
                 <Input
                   id="order"
                   type="number"
-                  min={0}
                   value={form.order}
-                  onChange={(e) => setForm({ ...form, order: Number(e.target.value) })}
-                  placeholder="0"
+                  onChange={(e) =>
+                    updateField(
+                      'order',
+                      Number(e.target.value) || 0
+                    )
+                  }
                 />
               </div>
             </div>
-          </CardContent>
-        </Card>
 
-        <Card className="border-border/60">
-          <CardContent className="pt-6 space-y-4">
-            <h3 className="font-display font-semibold">Features *</h3>
-            <p className="text-sm text-muted-foreground">Add at least one feature</p>
-            {form.features.map((feature, index) => (
-              <div key={index} className="flex gap-2">
-                <Input
-                  value={feature}
-                  onChange={(e) => updateFeature(index, e.target.value)}
-                  placeholder="Feature description"
-                />
-                {form.features.length > 1 && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removeFeature(index)}
+            <div className="space-y-4">
+              <div>
+                <Label>Features</Label>
+                <p className="text-sm text-muted-foreground">
+                  Add the features included in this package.
+                </p>
+              </div>
+
+              {form.features.map(
+                (feature, index) => (
+                  <div
+                    key={index}
+                    className="flex gap-2"
                   >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
+                    <Input
+                      value={feature}
+                      onChange={(e) =>
+                        updateFeature(
+                          index,
+                          e.target.value
+                        )
+                      }
+                      placeholder={`Feature ${index + 1}`}
+                    />
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() =>
+                        removeFeature(index)
+                      }
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )
+              )}
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={addFeature}
+                className="gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Add Feature
+              </Button>
+            </div>
+
+            <div className="space-y-4 rounded-xl border p-4">
+              <div className="flex items-center gap-3">
+                <Checkbox
+                  id="popular"
+                  checked={form.is_popular}
+                  onCheckedChange={(value) =>
+                    updateField(
+                      'is_popular',
+                      value === true
+                    )
+                  }
+                />
+
+                <Label htmlFor="popular">
+                  Mark as popular
+                </Label>
               </div>
-            ))}
-            <Button
-              type="button"
-              variant="outline"
-              onClick={addFeature}
-              className="gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              Add Feature
-            </Button>
-          </CardContent>
-        </Card>
 
-        <Card className="border-border/60">
-          <CardContent className="pt-6 space-y-4">
-            <h3 className="font-display font-semibold">Publishing Options</h3>
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="popular"
-                checked={form.is_popular}
-                onCheckedChange={(v) => setForm({ ...form, is_popular: v === true })}
-              />
-              <Label htmlFor="popular">Mark as popular package</Label>
+              <div className="flex items-center gap-3">
+                <Checkbox
+                  id="published"
+                  checked={form.is_published}
+                  onCheckedChange={(value) =>
+                    updateField(
+                      'is_published',
+                      value === true
+                    )
+                  }
+                />
+
+                <Label htmlFor="published">
+                  Publish on website
+                </Label>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="published"
-                checked={form.is_published}
-                onCheckedChange={(v) => setForm({ ...form, is_published: v === true })}
-              />
-              <Label htmlFor="published">Publish immediately</Label>
+
+            {error && (
+              <p className="text-sm text-destructive">
+                {error}
+              </p>
+            )}
+
+            <div className="flex justify-end">
+              <Button
+                type="submit"
+                disabled={saving}
+                className="gap-2"
+              >
+                {saving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+
+                {saving
+                  ? 'Saving...'
+                  : 'Save Package'}
+              </Button>
             </div>
-          </CardContent>
-        </Card>
-
-        {error && <p className="text-sm text-destructive">{error}</p>}
-
-        <div className="flex gap-3">
-          <Button type="button" variant="outline" onClick={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent, false)} disabled={saving}>
-            {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-            Save as Draft
-          </Button>
-          <Button type="submit" disabled={saving}>
-            {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-            Publish Package
-          </Button>
-        </div>
-      </form>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -1,13 +1,18 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { CalendarCheck, Clock, Mail, Phone, Building2, Briefcase, MessageSquare } from 'lucide-react';
+import {
+  Search,
+  CalendarCheck,
+  Eye,
+  Trash2,
+  Loader2,
+} from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
 import { supabase } from '@/lib/supabase';
 
 type Consultation = {
@@ -29,81 +34,240 @@ type Consultation = {
 export default function AdminConsultationsPage() {
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => { loadConsultations(); }, []);
+  const [search, setSearch] = useState('');
+  const [error, setError] = useState('');
 
   const loadConsultations = async () => {
-    const { data } = await supabase.from('consultation_requests').select('*').order('created_at', { ascending: false });
-    setConsultations(data || []);
+    setLoading(true);
+    setError('');
+
+    const { data, error: fetchError } = await supabase
+      .from('consultation_requests')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (fetchError) {
+      console.error('Error loading consultations:', fetchError);
+      setError(fetchError.message);
+      setConsultations([]);
+    } else {
+      setConsultations((data || []) as Consultation[]);
+    }
+
     setLoading(false);
   };
 
-  const updateStatus = async (id: string, status: string) => {
-    await supabase.from('consultation_requests').update({ status }).eq('id', id);
+  useEffect(() => {
     loadConsultations();
+  }, []);
+
+  const updateStatus = async (
+    id: string,
+    status: string
+  ) => {
+    const { error: updateError } = await supabase
+      .from('consultation_requests')
+      .update({ status })
+      .eq('id', id);
+
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
+
+    await loadConsultations();
   };
 
-  if (loading) return <div className="animate-pulse text-muted-foreground">Loading...</div>;
+  const handleDelete = async (id: string) => {
+    if (
+      !window.confirm(
+        'Are you sure you want to delete this consultation request?'
+      )
+    ) {
+      return;
+    }
+
+    const { error: deleteError } = await supabase
+      .from('consultation_requests')
+      .delete()
+      .eq('id', id);
+
+    if (deleteError) {
+      setError(deleteError.message);
+      return;
+    }
+
+    await loadConsultations();
+  };
+
+  const filtered = consultations.filter((item) => {
+    const query = search.toLowerCase();
+
+    return (
+      item.full_name.toLowerCase().includes(query) ||
+      item.email.toLowerCase().includes(query) ||
+      (item.company || '').toLowerCase().includes(query) ||
+      (item.industry || '').toLowerCase().includes(query)
+    );
+  });
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-display text-2xl font-bold tracking-tight">Consultation Requests</h1>
-        <p className="mt-1 text-muted-foreground">View and manage booking requests from clients.</p>
+        <h1 className="font-display text-2xl font-bold tracking-tight">
+          Consultations
+        </h1>
+
+        <p className="mt-1 text-muted-foreground">
+          View and manage consultation requests from potential clients.
+        </p>
       </div>
 
-      {consultations.length === 0 ? (
-        <Card className="border-border/60">
-          <CardContent className="pt-6 text-center">
-            <CalendarCheck className="mx-auto h-12 w-12 text-muted-foreground/50" />
-            <p className="mt-4 text-muted-foreground">No consultation requests yet.</p>
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+
+        <Input
+          placeholder="Search consultations..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-10"
+        />
+      </div>
+
+      {error && (
+        <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3">
+          <p className="text-sm text-destructive">{error}</p>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Loading consultations...
+        </div>
+      ) : filtered.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center py-12 text-center">
+            <CalendarCheck className="h-12 w-12 text-muted-foreground/40" />
+
+            <p className="mt-4 text-muted-foreground">
+              No consultation requests found.
+            </p>
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-4">
-          {consultations.map((c) => (
-            <Card key={c.id} className="border-border/60">
-              <CardContent className="pt-6">
+        <div className="space-y-3">
+          {filtered.map((item) => (
+            <Card key={item.id} className="border-border/60">
+              <CardContent className="p-5">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="flex-1 space-y-3">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-display font-semibold text-lg">{c.full_name}</h3>
-                      <Badge variant={c.status === 'new' ? 'default' : 'secondary'}>{c.status}</Badge>
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Clock className="h-3 w-3" /> {new Date(c.created_at).toLocaleDateString()}
-                      </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge
+                        variant={
+                          item.status === 'new'
+                            ? 'default'
+                            : 'secondary'
+                        }
+                      >
+                        {item.status}
+                      </Badge>
+
+                      {item.industry && (
+                        <Badge variant="outline">
+                          {item.industry}
+                        </Badge>
+                      )}
                     </div>
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      {c.company && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Building2 className="h-4 w-4 text-primary" /> {c.company}</div>}
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground"><Mail className="h-4 w-4 text-primary" /> {c.email}</div>
-                      {c.phone && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Phone className="h-4 w-4 text-primary" /> {c.phone}</div>}
-                      {c.business_size && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Briefcase className="h-4 w-4 text-primary" /> {c.business_size}</div>}
-                      {c.industry && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Building2 className="h-4 w-4 text-primary" /> {c.industry}</div>}
-                      {c.preferred_date && <div className="flex items-center gap-2 text-sm text-muted-foreground"><CalendarCheck className="h-4 w-4 text-primary" /> {c.preferred_date} {c.preferred_time && `at ${c.preferred_time}`}</div>}
-                    </div>
-                    {c.services_needed && c.services_needed.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5">
-                        {c.services_needed.map((s) => <Badge key={s} variant="secondary">{s}</Badge>)}
-                      </div>
+
+                    <h3 className="mt-2 font-display text-lg font-semibold">
+                      {item.full_name}
+                    </h3>
+
+                    {item.company && (
+                      <p className="text-sm text-muted-foreground">
+                        {item.company}
+                      </p>
                     )}
-                    {c.message && (
-                      <div className="rounded-lg border border-border/60 p-3 text-sm text-muted-foreground">
-                        <MessageSquare className="h-4 w-4 mb-1 text-primary" />
-                        {c.message}
+
+                    <div className="mt-2 space-y-1 text-sm text-muted-foreground">
+                      <p>{item.email}</p>
+
+                      {item.phone && <p>{item.phone}</p>}
+
+                      {item.preferred_date && (
+                        <p>
+                          Preferred date:{' '}
+                          {new Date(
+                            item.preferred_date
+                          ).toLocaleDateString()}
+                        </p>
+                      )}
+
+                      {item.preferred_time && (
+                        <p>
+                          Preferred time: {item.preferred_time}
+                        </p>
+                      )}
+                    </div>
+
+                    {item.message && (
+                      <p className="mt-3 line-clamp-3 text-sm text-muted-foreground">
+                        {item.message}
+                      </p>
+                    )}
+
+                    {item.services_needed?.length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {item.services_needed.map((service) => (
+                          <Badge
+                            key={service}
+                            variant="secondary"
+                          >
+                            {service}
+                          </Badge>
+                        ))}
                       </div>
                     )}
                   </div>
-                  <div className="w-full lg:w-48">
-                    <Select value={c.status} onValueChange={(v) => updateStatus(c.id, v)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="new">New</SelectItem>
-                        <SelectItem value="contacted">Contacted</SelectItem>
-                        <SelectItem value="scheduled">Scheduled</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
-                        <SelectItem value="cancelled">Cancelled</SelectItem>
-                      </SelectContent>
-                    </Select>
+
+                  <div className="flex flex-wrap gap-2">
+                    <select
+                      value={item.status}
+                      onChange={(e) =>
+                        updateStatus(item.id, e.target.value)
+                      }
+                      className="h-9 rounded-md border border-border bg-background px-3 text-sm"
+                    >
+                      <option value="new">New</option>
+                      <option value="contacted">Contacted</option>
+                      <option value="scheduled">Scheduled</option>
+                      <option value="completed">Completed</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
+
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      title="View details"
+                      onClick={() =>
+                        window.alert(
+                          `${item.full_name}\n\n${item.message || 'No message provided.'}`
+                        )
+                      }
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      title="Delete consultation"
+                      onClick={() => handleDelete(item.id)}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               </CardContent>

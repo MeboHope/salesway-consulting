@@ -28,6 +28,7 @@ type ServiceForm = {
   icon: string;
   features: string;
   is_published: boolean;
+  order: number;
 };
 
 export default function EditServicePage({
@@ -50,6 +51,7 @@ export default function EditServicePage({
     icon: 'Target',
     features: '',
     is_published: true,
+    order: 0,
   });
 
   useEffect(() => {
@@ -59,9 +61,7 @@ export default function EditServicePage({
 
       const { data, error: fetchError } = await supabase
         .from('services')
-        .select(
-          'title, slug, summary, details, icon, features, is_published'
-        )
+        .select('title, slug, summary, details, icon, features, is_published, order')
         .eq('id', id)
         .maybeSingle();
 
@@ -79,15 +79,14 @@ export default function EditServicePage({
       }
 
       setForm({
-        title: data.title ?? '',
-        slug: data.slug ?? '',
-        summary: data.summary ?? '',
-        details: data.details ?? '',
-        icon: data.icon ?? 'Target',
-        features: Array.isArray(data.features)
-          ? data.features.join('\n')
-          : '',
+        title: data.title || '',
+        slug: data.slug || '',
+        summary: data.summary || '',
+        details: data.details || '',
+        icon: data.icon || 'Target',
+        features: (data.features || []).join(', '),
         is_published: data.is_published ?? true,
+        order: data.order ?? 0,
       });
 
       setLoading(false);
@@ -110,29 +109,20 @@ export default function EditServicePage({
     setSaving(true);
     setError('');
 
-    const finalSlug = form.slug.trim() || slugify(form.title);
-
-    if (!finalSlug) {
-      setError('Please provide a service title.');
-      setSaving(false);
-      return;
-    }
-
-    const features = form.features
-      .split('\n')
-      .map((feature) => feature.trim())
-      .filter(Boolean);
+    const slug = form.slug || slugify(form.title);
+    const features = form.features.split(',').map((item) => item.trim()).filter(Boolean);
 
     const { error: updateError } = await supabase
       .from('services')
       .update({
-        title: form.title.trim(),
-        slug: finalSlug,
-        summary: form.summary.trim(),
-        details: form.details.trim() || null,
-        icon: form.icon.trim() || 'Target',
+        title: form.title,
+        slug,
+        summary: form.summary,
+        details: form.details,
+        icon: form.icon,
         features,
         is_published: form.is_published,
+        order: form.order,
       })
       .eq('id', id);
 

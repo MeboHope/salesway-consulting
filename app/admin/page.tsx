@@ -14,6 +14,11 @@ import {
   Settings,
   Clock,
   LayoutDashboard,
+  Users,
+  TrendingUp,
+  Plus,
+  AlertCircle,
+  CheckCircle2,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -39,57 +44,73 @@ const adminSections = [
     href: '/admin/posts',
     label: 'Blog Posts',
     icon: FileText,
-    description:
-      'Create, edit, and publish blog content.',
+    description: 'Create, edit, and publish blog content.',
   },
   {
     href: '/admin/services',
     label: 'Services',
     icon: Briefcase,
-    description:
-      'Manage the services shown on the website.',
+    description: 'Manage the services shown on the website.',
   },
   {
     href: '/admin/resources',
     label: 'Resources',
     icon: Download,
-    description:
-      'Publish and update resource downloads.',
+    description: 'Publish and update resource downloads.',
   },
   {
     href: '/admin/testimonials',
     label: 'Testimonials',
     icon: Star,
-    description:
-      'Review and manage client testimonials.',
+    description: 'Review and manage client testimonials.',
   },
   {
     href: '/admin/faqs',
     label: 'FAQs',
     icon: HelpCircle,
-    description:
-      'Update frequently asked questions.',
+    description: 'Update frequently asked questions.',
+  },
+  {
+    href: '/admin/case-studies',
+    label: 'Case Studies',
+    icon: TrendingUp,
+    description: 'Showcase client success stories.',
+  },
+  {
+    href: '/admin/team',
+    label: 'Team Members',
+    icon: Users,
+    description: 'Manage team profiles and bios.',
+  },
+  {
+    href: '/admin/clients',
+    label: 'Clients',
+    icon: Briefcase,
+    description: 'Manage client logos and testimonials.',
+  },
+  {
+    href: '/admin/pricing',
+    label: 'Pricing',
+    icon: Settings,
+    description: 'Update pricing packages and plans.',
+  },
+  {
+    href: '/admin/careers',
+    label: 'Careers',
+    icon: Briefcase,
+    description: 'Post and manage job openings.',
   },
   {
     href: '/admin/consultations',
     label: 'Consultations',
     icon: CalendarCheck,
-    description:
-      'View consultation requests and leads.',
+    description: 'View consultation requests and leads.',
   },
   {
     href: '/admin/subscribers',
     label: 'Subscribers',
     icon: Mail,
-    description:
-      'Manage newsletter and email list subscribers.',
-  },
-  {
-    href: '/admin/settings',
-    label: 'Settings',
-    icon: Settings,
-    description:
-      'Update admin settings and preferences.',
+    description: 'Manage newsletter and email list subscribers.',
   },
 ];
 
@@ -101,6 +122,11 @@ export default function AdminDashboardPage() {
     posts: 0,
     services: 0,
     resources: 0,
+    testimonials: 0,
+    consultations: 0,
+    subscribers: 0,
+    publishedPosts: 0,
+    draftPosts: 0,
   });
 
   const [recentPosts, setRecentPosts] =
@@ -108,6 +134,9 @@ export default function AdminDashboardPage() {
 
   const [recentResources, setRecentResources] =
     useState<RecentItem[]>([]);
+
+  const [pendingConsultations, setPendingConsultations] =
+    useState(0);
 
   const [loading, setLoading] = useState(true);
 
@@ -129,6 +158,7 @@ export default function AdminDashboardPage() {
   const firstName =
     metadata?.first_name?.trim() ||
     metadata?.firstName?.trim() ||
+    user?.email?.split('@')[0]?.charAt(0).toUpperCase() + user?.email?.split('@')[0]?.slice(1) ||
     'Admin';
 
   useEffect(() => {
@@ -139,6 +169,9 @@ export default function AdminDashboardPage() {
         postsRes,
         servicesRes,
         resourcesRes,
+        testimonialsRes,
+        consultationsRes,
+        subscribersRes,
       ] = await Promise.all([
         supabase
           .from('blog_posts')
@@ -171,7 +204,29 @@ export default function AdminDashboardPage() {
             ascending: false,
           })
           .limit(3),
+
+        supabase
+          .from('testimonials')
+          .select('id', {
+            count: 'exact',
+          }),
+
+        supabase
+          .from('consultation_requests')
+          .select('id, status', {
+            count: 'exact',
+          }),
+
+        supabase
+          .from('newsletter_subscribers')
+          .select('id', {
+            count: 'exact',
+          }),
       ]);
+
+      const publishedPosts = (postsRes.data || []).filter(p => p.status === 'published').length;
+      const draftPosts = (postsRes.data || []).filter(p => p.status === 'draft').length;
+      const newConsultations = (consultationsRes.data || []).filter(c => c.status === 'new').length;
 
       setCounts({
         posts:
@@ -188,7 +243,27 @@ export default function AdminDashboardPage() {
           resourcesRes.count ??
           resourcesRes.data?.length ??
           0,
+
+        testimonials:
+          testimonialsRes.count ??
+          testimonialsRes.data?.length ??
+          0,
+
+        consultations:
+          consultationsRes.count ??
+          consultationsRes.data?.length ??
+          0,
+
+        subscribers:
+          subscribersRes.count ??
+          subscribersRes.data?.length ??
+          0,
+
+        publishedPosts,
+        draftPosts,
       });
+
+      setPendingConsultations(newConsultations);
 
       setRecentPosts(
         (postsRes.data || []) as RecentItem[]
@@ -260,24 +335,18 @@ export default function AdminDashboardPage() {
             </section>
 
             {/* Statistics */}
-            <section className="grid gap-4 md:grid-cols-3">
+            <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <Card className="border-border/60 bg-card shadow-sm">
                 <CardContent className="space-y-4 p-6">
                   <div className="flex items-center gap-3 text-primary">
                     <FileText className="h-5 w-5" />
-
-                    <h2 className="font-semibold">
-                      Blog posts
-                    </h2>
+                    <h2 className="font-semibold">Blog posts</h2>
                   </div>
-
-                  <p className="text-3xl font-semibold">
-                    {loading ? '—' : counts.posts}
-                  </p>
-
-                  <p className="text-sm text-muted-foreground">
-                    Total published and draft articles.
-                  </p>
+                  <p className="text-3xl font-semibold">{loading ? '—' : counts.posts}</p>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Badge variant="default" className="bg-green-500/20 text-green-700 dark:text-green-400">{counts.publishedPosts} published</Badge>
+                    <Badge variant="secondary">{counts.draftPosts} draft</Badge>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -285,19 +354,10 @@ export default function AdminDashboardPage() {
                 <CardContent className="space-y-4 p-6">
                   <div className="flex items-center gap-3 text-primary">
                     <Briefcase className="h-5 w-5" />
-
-                    <h2 className="font-semibold">
-                      Services
-                    </h2>
+                    <h2 className="font-semibold">Services</h2>
                   </div>
-
-                  <p className="text-3xl font-semibold">
-                    {loading ? '—' : counts.services}
-                  </p>
-
-                  <p className="text-sm text-muted-foreground">
-                    Current service offerings live on the site.
-                  </p>
+                  <p className="text-3xl font-semibold">{loading ? '—' : counts.services}</p>
+                  <p className="text-sm text-muted-foreground">Current service offerings</p>
                 </CardContent>
               </Card>
 
@@ -305,19 +365,73 @@ export default function AdminDashboardPage() {
                 <CardContent className="space-y-4 p-6">
                   <div className="flex items-center gap-3 text-primary">
                     <Download className="h-5 w-5" />
-
-                    <h2 className="font-semibold">
-                      Resources
-                    </h2>
+                    <h2 className="font-semibold">Resources</h2>
                   </div>
+                  <p className="text-3xl font-semibold">{loading ? '—' : counts.resources}</p>
+                  <p className="text-sm text-muted-foreground">Downloadable guides</p>
+                </CardContent>
+              </Card>
 
-                  <p className="text-3xl font-semibold">
-                    {loading ? '—' : counts.resources}
-                  </p>
+              <Card className="border-border/60 bg-card shadow-sm">
+                <CardContent className="space-y-4 p-6">
+                  <div className="flex items-center gap-3 text-primary">
+                    <Star className="h-5 w-5" />
+                    <h2 className="font-semibold">Testimonials</h2>
+                  </div>
+                  <p className="text-3xl font-semibold">{loading ? '—' : counts.testimonials}</p>
+                  <p className="text-sm text-muted-foreground">Client reviews</p>
+                </CardContent>
+              </Card>
+            </section>
 
-                  <p className="text-sm text-muted-foreground">
-                    Downloadable guides and templates.
-                  </p>
+            {/* Secondary Stats */}
+            <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <Card className="border-border/60 bg-card shadow-sm">
+                <CardContent className="space-y-4 p-6">
+                  <div className="flex items-center gap-3 text-primary">
+                    <CalendarCheck className="h-5 w-5" />
+                    <h2 className="font-semibold">Consultations</h2>
+                  </div>
+                  <p className="text-3xl font-semibold">{loading ? '—' : counts.consultations}</p>
+                  {pendingConsultations > 0 && (
+                    <Badge variant="destructive" className="gap-1">
+                      <AlertCircle className="h-3 w-3" />
+                      {pendingConsultations} new
+                    </Badge>
+                  )}
+                  <p className="text-sm text-muted-foreground">Total requests received</p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-border/60 bg-card shadow-sm">
+                <CardContent className="space-y-4 p-6">
+                  <div className="flex items-center gap-3 text-primary">
+                    <Mail className="h-5 w-5" />
+                    <h2 className="font-semibold">Subscribers</h2>
+                  </div>
+                  <p className="text-3xl font-semibold">{loading ? '—' : counts.subscribers}</p>
+                  <p className="text-sm text-muted-foreground">Newsletter subscribers</p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-border/60 bg-gradient-to-br from-primary/10 to-accent/10 shadow-sm">
+                <CardContent className="space-y-4 p-6">
+                  <div className="flex items-center gap-3 text-primary">
+                    <TrendingUp className="h-5 w-5" />
+                    <h2 className="font-semibold">Quick Actions</h2>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Link href="/admin/posts/new">
+                      <Button size="sm" variant="secondary" className="gap-1">
+                        <Plus className="h-3 w-3" /> New Post
+                      </Button>
+                    </Link>
+                    <Link href="/admin/consultations">
+                      <Button size="sm" variant="secondary" className="gap-1">
+                        <CalendarCheck className="h-3 w-3" /> Requests
+                      </Button>
+                    </Link>
+                  </div>
                 </CardContent>
               </Card>
             </section>
@@ -443,43 +557,45 @@ export default function AdminDashboardPage() {
             </section>
 
             {/* Admin sections */}
-            <section className="grid gap-4 lg:grid-cols-3">
-              {adminSections.map((section) => {
-                const Icon = section.icon;
+            <section>
+              <h2 className="font-display text-xl font-semibold tracking-tight mb-4">Content Management</h2>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {adminSections.map((section) => {
+                  const Icon = section.icon;
 
-                return (
-                  <Card
-                    key={section.href}
-                    className="border-border/60 bg-card shadow-sm transition-shadow hover:shadow-md"
-                  >
-                    <CardContent className="space-y-4 p-6">
-                      <div className="flex items-center gap-3 text-primary">
-                        <Icon className="h-5 w-5" />
+                  return (
+                    <Card
+                      key={section.href}
+                      className="border-border/60 bg-card shadow-sm transition-all hover:shadow-md hover:border-primary/30"
+                    >
+                      <CardContent className="space-y-4 p-6">
+                        <div className="flex items-center gap-3 text-primary">
+                          <Icon className="h-5 w-5" />
+                          <h2 className="font-semibold">
+                            {section.label}
+                          </h2>
+                        </div>
 
-                        <h2 className="font-semibold">
-                          {section.label}
-                        </h2>
-                      </div>
+                        <p className="text-sm text-muted-foreground">
+                          {section.description}
+                        </p>
 
-                      <p className="text-sm text-muted-foreground">
-                        {section.description}
-                      </p>
-
-                      <Link
-                        href={section.href}
-                        className="block"
-                      >
-                        <Button
-                          variant="secondary"
-                          className="mt-2 w-full"
+                        <Link
+                          href={section.href}
+                          className="block"
                         >
-                          Open
-                        </Button>
-                      </Link>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+                          <Button
+                            variant="outline"
+                            className="mt-2 w-full"
+                          >
+                            Manage
+                          </Button>
+                        </Link>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
             </section>
     </div>
   );

@@ -1,7 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Building2, ArrowRight, Star } from 'lucide-react';
+import Link from 'next/link';
+import {
+  ArrowRight,
+  Building2,
+  Quote,
+} from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -17,81 +23,127 @@ type Client = {
   order: number;
 };
 
+const fallbackClients: Client[] = [];
+
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const loadClients = async () => {
+      const { data, error } = await supabase
+        .from('clients')
+        .select(
+          'id, name, logo_url, industry, testimonial, is_published, "order"'
+        )
+        .eq('is_published', true)
+        .order('order', { ascending: true })
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error loading clients:', error);
+        setClients(fallbackClients);
+      } else {
+        setClients((data || []) as Client[]);
+      }
+
+      setLoading(false);
+    };
+
     loadClients();
   }, []);
 
-  const loadClients = async () => {
-    const { data } = await supabase
-      .from('clients')
-      .select('*')
-      .eq('is_published', true)
-      .order('order', { ascending: true })
-      .order('created_at', { ascending: false });
-    setClients(data || []);
-    setLoading(false);
-  };
-
   return (
     <main className="pt-16">
-      {/* Header */}
-      <section className="relative py-20 sm:py-28">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-transparent" />
+      <section className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-background to-transparent py-20">
+        <div className="absolute inset-0 bg-grid opacity-20" />
+
         <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
-          <Badge variant="secondary" className="mb-4 bg-primary/10 text-primary">
+          <Badge
+            variant="secondary"
+            className="mb-4 bg-primary/10 text-primary"
+          >
             Our Clients
           </Badge>
-          <h1 className="font-display text-4xl font-bold tracking-tight sm:text-5xl text-balance">
-            Trusted by <span className="text-accent">industry leaders</span>
+
+          <h1 className="font-display text-4xl font-bold tracking-tight sm:text-5xl">
+            Businesses we've helped{' '}
+            <span className="text-accent">
+              grow
+            </span>
           </h1>
-          <p className="mt-6 text-lg text-muted-foreground text-pretty">
-            We've had the privilege of working with amazing companies across
-            various industries to help them achieve their growth goals.
+
+          <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-muted-foreground">
+            We work with ambitious businesses across
+            industries to build stronger sales,
+            marketing, strategy, and operations.
           </p>
         </div>
       </section>
 
-      {/* Clients Grid */}
       <section className="py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           {loading ? (
-            <div className="animate-pulse text-center text-muted-foreground">Loading clients...</div>
+            <div className="text-center text-muted-foreground">
+              Loading clients...
+            </div>
           ) : clients.length === 0 ? (
             <Card className="border-border/60">
-              <CardContent className="pt-12 pb-12 text-center">
+              <CardContent className="py-16 text-center">
                 <Building2 className="mx-auto h-16 w-16 text-muted-foreground/30" />
-                <p className="mt-4 text-muted-foreground">No clients published yet.</p>
+
+                <h2 className="mt-5 font-display text-xl font-semibold">
+                  Our client portfolio is growing
+                </h2>
+
+                <p className="mx-auto mt-2 max-w-md text-muted-foreground">
+                  Client stories and partnerships will
+                  appear here as they are published.
+                </p>
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {clients.map((client) => (
-                <Card key={client.id} className="border-border/60 bg-card">
-                  <CardContent className="p-6 space-y-4">
-                    <div className="aspect-square bg-gradient-to-br from-primary/5 to-accent/5 rounded-lg flex items-center justify-center">
+                <Card
+                  key={client.id}
+                  className="group overflow-hidden border-border/60 transition-all hover:-translate-y-1 hover:shadow-xl"
+                >
+                  <CardContent className="p-6">
+                    <div className="flex h-20 items-center justify-center rounded-2xl bg-muted/40 p-4">
                       {client.logo_url ? (
                         <img
                           src={client.logo_url}
-                          alt={client.name}
-                          className="h-24 w-24 object-contain"
+                          alt={`${client.name} logo`}
+                          className="max-h-14 max-w-full object-contain"
                         />
                       ) : (
-                        <Building2 className="h-12 w-12 text-muted-foreground/30" />
+                        <Building2 className="h-10 w-10 text-primary/60" />
                       )}
                     </div>
-                    <div>
-                      <h3 className="font-display font-semibold text-foreground">{client.name}</h3>
-                      <Badge variant="outline" className="mt-1">{client.industry}</Badge>
+
+                    <div className="mt-5">
+                      <Badge
+                        variant="secondary"
+                        className="bg-primary/10 text-primary"
+                      >
+                        {client.industry}
+                      </Badge>
+
+                      <h2 className="mt-3 font-display text-xl font-semibold">
+                        {client.name}
+                      </h2>
+
+                      {client.testimonial && (
+                        <div className="mt-5 border-t border-border/60 pt-5">
+                          <Quote className="h-5 w-5 text-accent" />
+
+                          <p className="mt-3 text-sm leading-7 text-muted-foreground">
+                            {client.testimonial}
+                          </p>
+                        </div>
+                      )}
                     </div>
-                    {client.testimonial && (
-                      <p className="text-sm text-muted-foreground line-clamp-2 italic">
-                        "{client.testimonial}"
-                      </p>
-                    )}
                   </CardContent>
                 </Card>
               ))}
@@ -100,46 +152,39 @@ export default function ClientsPage() {
         </div>
       </section>
 
-      {/* Stats */}
-      <section className="py-16 bg-gradient-to-br from-primary/5 via-background to-transparent">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {[
-              { icon: Building2, value: '120+', label: 'Businesses served' },
-              { icon: Star, value: '98%', label: 'Client satisfaction' },
-              { icon: Building2, value: '12+', label: 'Industries' },
-            ].map((stat) => (
-              <div key={stat.label} className="text-center">
-                <stat.icon className="mx-auto h-8 w-8 text-primary" />
-                <div className="mt-2 text-3xl font-bold text-foreground">{stat.value}</div>
-                <div className="mt-1 text-sm text-muted-foreground">{stat.label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="py-20 bg-gradient-to-br from-primary/5 via-background to-transparent">
+      <section className="bg-gradient-to-br from-primary to-primary/90 py-20 text-primary-foreground">
         <div className="mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
-          <h2 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
-            Ready to join our client family?
+          <h2 className="font-display text-3xl font-bold sm:text-4xl">
+            Ready to become our next success story?
           </h2>
-          <p className="mt-4 text-lg text-muted-foreground">
-            Let's discuss how we can help your business grow.
+
+          <p className="mx-auto mt-4 max-w-2xl text-primary-foreground/80">
+            Let's discuss your business goals and
+            identify the opportunities that can move
+            your business forward.
           </p>
-          <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:justify-center">
-            <Button className="gap-2" asChild>
-              <a href="/book">
+
+          <div className="mt-8 flex flex-col justify-center gap-4 sm:flex-row">
+            <Button
+              asChild
+              size="lg"
+              className="gap-2 bg-accent text-accent-foreground hover:bg-accent/90"
+            >
+              <Link href="/book">
                 Book a Consultation
                 <ArrowRight className="h-4 w-4" />
-              </a>
+              </Link>
             </Button>
-            <Button variant="outline" className="gap-2" asChild>
-              <a href="/contact">
+
+            <Button
+              asChild
+              size="lg"
+              variant="outline"
+              className="border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground/10"
+            >
+              <Link href="/contact">
                 Contact Us
-                <ArrowRight className="h-4 w-4" />
-              </a>
+              </Link>
             </Button>
           </div>
         </div>

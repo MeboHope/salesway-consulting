@@ -286,7 +286,7 @@ export default function NewResourcePage() {
                     e.target.value
                   )
                 }
-                placeholder="Strategy"
+                placeholder="Strategy, Sales, Marketing, eBook"
               />
 
             </div>

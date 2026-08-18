@@ -2,112 +2,157 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Save, ArrowLeft, Loader2, Plus, X } from 'lucide-react';
+import {
+  ArrowLeft,
+  Loader2,
+  Plus,
+  Save,
+  Trash2,
+} from 'lucide-react';
+
+import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+
 import { supabase } from '@/lib/supabase';
 
-function slugify(text: string) {
-  return text
+type ServiceForm = {
+  title: string;
+  slug: string;
+  summary: string;
+  details: string;
+  icon: string;
+  features: string[];
+  is_published: boolean;
+};
+
+function slugify(value: string) {
+  return value
     .toLowerCase()
     .trim()
     .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '');
+    .replace(/^-+|-+$/g, '');
 }
 
 export default function NewServicePage() {
   const router = useRouter();
 
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<ServiceForm>({
     title: '',
     slug: '',
     summary: '',
     details: '',
     icon: 'Target',
-    features: [''],
+    features: [],
     is_published: true,
   });
 
-  const updateFeature = (index: number, value: string) => {
-    const features = [...form.features];
-    features[index] = value;
-
-    setForm({
-      ...form,
-      features,
-    });
-  };
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   const addFeature = () => {
-    setForm({
-      ...form,
-      features: [...form.features, ''],
-    });
+    setForm((previous) => ({
+      ...previous,
+      features: [...previous.features, ''],
+    }));
   };
 
   const removeFeature = (index: number) => {
-    if (form.features.length === 1) {
-      setForm({
-        ...form,
-        features: [''],
-      });
-      return;
-    }
-
-    setForm({
-      ...form,
-      features: form.features.filter((_, i) => i !== index),
-    });
+    setForm((previous) => ({
+      ...previous,
+      features: previous.features.filter(
+        (_, featureIndex) => featureIndex !== index
+      ),
+    }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const updateFeature = (
+    index: number,
+    value: string
+  ) => {
+    setForm((previous) => ({
+      ...previous,
+      features: previous.features.map(
+        (feature, featureIndex) =>
+          featureIndex === index
+            ? value
+            : feature
+      ),
+    }));
+  };
+
+  const handleTitleChange = (
+    value: string
+  ) => {
+    setForm((previous) => ({
+      ...previous,
+      title: value,
+      slug:
+        previous.slug ===
+        slugify(previous.title)
+          ? slugify(value)
+          : previous.slug,
+    }));
+  };
+
+  const handleSubmit = async (
+    event: React.FormEvent
+  ) => {
+    event.preventDefault();
 
     setSaving(true);
     setError('');
 
     const title = form.title.trim();
+    const slug =
+      form.slug.trim() || slugify(title);
 
     if (!title) {
-      setError('Service title is required.');
+      setError('Please enter a service title.');
       setSaving(false);
       return;
     }
 
-    const slug = form.slug.trim() || slugify(title);
+    if (!form.summary.trim()) {
+      setError('Please enter a service summary.');
+      setSaving(false);
+      return;
+    }
 
-    const cleanedFeatures = form.features
+    const features = form.features
       .map((feature) => feature.trim())
       .filter(Boolean);
 
-    if (cleanedFeatures.length === 0) {
-      setError('Please add at least one service feature.');
-      setSaving(false);
-      return;
-    }
-
-    const { error: insertError } = await supabase
-      .from('services')
-      .insert({
-        title,
-        slug,
-        summary: form.summary.trim(),
-        details: form.details.trim() || null,
-        icon: form.icon.trim() || 'Target',
-        features: cleanedFeatures,
-        is_published: form.is_published,
-      });
+    const { error: insertError } =
+      await supabase
+        .from('services')
+        .insert({
+          title,
+          slug,
+          summary: form.summary.trim(),
+          details:
+            form.details.trim() || null,
+          icon: form.icon.trim() || 'Target',
+          features,
+          is_published: form.is_published,
+        });
 
     if (insertError) {
-      console.error('Error creating service:', insertError);
+      console.error(
+        'Error creating service:',
+        insertError
+      );
+
       setError(insertError.message);
       setSaving(false);
       return;
@@ -118,60 +163,58 @@ export default function NewServicePage() {
   };
 
   return (
-    <div className="max-w-4xl space-y-6">
-      <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          type="button"
-          onClick={() => router.push('/admin/services')}
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
+    <div className="mx-auto max-w-4xl space-y-6">
+      <div className="flex items-center gap-3">
+        <Link href="/admin/services">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            aria-label="Back to services"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        </Link>
 
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tight">
             New Service
           </h1>
 
-          <p className="mt-1 text-sm text-muted-foreground">
-            Add a service that can be displayed on the website.
+          <p className="mt-1 text-muted-foreground">
+            Add a service to your Salesway Consulting website.
           </p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-6"
+      >
         <Card className="border-border/60">
-          <CardContent className="space-y-6 pt-6">
+          <CardHeader>
+            <CardTitle>Service Details</CardTitle>
+          </CardHeader>
 
-            {/* Title */}
+          <CardContent className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="title">
-                Service Title *
+                Service Title
               </Label>
 
               <Input
                 id="title"
-                required
-                placeholder="Sales Performance Consulting"
                 value={form.title}
-                onChange={(e) => {
-                  const title = e.target.value;
-
-                  setForm({
-                    ...form,
-                    title,
-                    slug: slugify(title),
-                  });
-                }}
+                onChange={(event) =>
+                  handleTitleChange(
+                    event.target.value
+                  )
+                }
+                placeholder="Sales Strategy & Growth"
+                required
               />
-
-              <p className="text-xs text-muted-foreground">
-                The URL slug is generated automatically from the title.
-              </p>
             </div>
 
-            {/* Slug */}
             <div className="space-y-2">
               <Label htmlFor="slug">
                 URL Slug
@@ -180,65 +223,64 @@ export default function NewServicePage() {
               <Input
                 id="slug"
                 value={form.slug}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    slug: slugify(e.target.value),
-                  })
+                onChange={(event) =>
+                  setForm((previous) => ({
+                    ...previous,
+                    slug: slugify(
+                      event.target.value
+                    ),
+                  }))
                 }
+                placeholder="sales-strategy-growth"
               />
 
               <p className="text-xs text-muted-foreground">
-                Example: sales-performance-consulting
+                Automatically generated from the
+                service title. You can edit it.
               </p>
             </div>
 
-            {/* Summary */}
             <div className="space-y-2">
               <Label htmlFor="summary">
-                Summary *
+                Summary
               </Label>
 
               <Textarea
                 id="summary"
-                required
-                rows={4}
-                placeholder="A short description of this service..."
                 value={form.summary}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    summary: e.target.value,
-                  })
+                onChange={(event) =>
+                  setForm((previous) => ({
+                    ...previous,
+                    summary:
+                      event.target.value,
+                  }))
                 }
+                placeholder="A short description of this service."
+                rows={4}
+                required
               />
-
-              <p className="text-xs text-muted-foreground">
-                This is the main description displayed on the services page.
-              </p>
             </div>
 
-            {/* Details */}
             <div className="space-y-2">
               <Label htmlFor="details">
-                Detailed Description
+                Details
               </Label>
 
               <Textarea
                 id="details"
-                rows={7}
-                placeholder="Explain the service in more detail..."
                 value={form.details}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    details: e.target.value,
-                  })
+                onChange={(event) =>
+                  setForm((previous) => ({
+                    ...previous,
+                    details:
+                      event.target.value,
+                  }))
                 }
+                placeholder="Explain what this service includes and how it helps clients."
+                rows={7}
               />
             </div>
 
-            {/* Icon */}
             <div className="space-y-2">
               <Label htmlFor="icon">
                 Icon
@@ -246,134 +288,163 @@ export default function NewServicePage() {
 
               <Input
                 id="icon"
-                placeholder="Target"
                 value={form.icon}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    icon: e.target.value,
-                  })
+                onChange={(event) =>
+                  setForm((previous) => ({
+                    ...previous,
+                    icon: event.target.value,
+                  }))
                 }
+                placeholder="Target"
               />
 
               <p className="text-xs text-muted-foreground">
-                Use a Lucide icon name such as Target, TrendingUp,
-                Megaphone, Users, Settings, or GraduationCap.
+                Enter the Lucide icon name used by
+                the website.
               </p>
             </div>
+          </CardContent>
+        </Card>
 
-            {/* Features */}
-            <div className="space-y-3">
-              <div>
-                <Label>
-                  Service Features *
-                </Label>
+        <Card className="border-border/60">
+          <CardHeader>
+            <div className="flex items-center justify-between gap-4">
+              <CardTitle>Service Features</CardTitle>
 
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Add the specific things included in this service.
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addFeature}
+                className="gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Add Feature
+              </Button>
+            </div>
+          </CardHeader>
+
+          <CardContent className="space-y-3">
+            {form.features.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-border p-6 text-center">
+                <p className="text-sm text-muted-foreground">
+                  No features added yet.
                 </p>
-              </div>
 
-              <div className="space-y-3">
-                {form.features.map((feature, index) => (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addFeature}
+                  className="mt-3 gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add First Feature
+                </Button>
+              </div>
+            ) : (
+              form.features.map(
+                (feature, index) => (
                   <div
                     key={index}
                     className="flex items-center gap-2"
                   >
                     <Input
-                      placeholder={`Feature ${index + 1}`}
                       value={feature}
-                      onChange={(e) =>
-                        updateFeature(index, e.target.value)
+                      onChange={(event) =>
+                        updateFeature(
+                          index,
+                          event.target.value
+                        )
                       }
+                      placeholder={`Feature ${index + 1}`}
                     />
 
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
-                      onClick={() => removeFeature(index)}
-                      aria-label={`Remove feature ${index + 1}`}
+                      onClick={() =>
+                        removeFeature(index)
+                      }
+                      aria-label={`Remove feature ${
+                        index + 1
+                      }`}
+                      className="text-destructive hover:text-destructive"
                     >
-                      <X className="h-4 w-4" />
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
-                ))}
-              </div>
+                )
+              )
+            )}
+          </CardContent>
+        </Card>
 
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="gap-2"
-                onClick={addFeature}
-              >
-                <Plus className="h-4 w-4" />
-                Add Feature
-              </Button>
-            </div>
+        <Card className="border-border/60">
+          <CardHeader>
+            <CardTitle>Publishing</CardTitle>
+          </CardHeader>
 
-            {/* Published */}
-            <div className="flex items-center gap-3 rounded-lg border border-border/60 p-4">
+          <CardContent>
+            <div className="flex items-center gap-3">
               <Checkbox
                 id="is_published"
                 checked={form.is_published}
-                onCheckedChange={(value) =>
-                  setForm({
-                    ...form,
-                    is_published: value === true,
-                  })
+                onCheckedChange={(checked) =>
+                  setForm((previous) => ({
+                    ...previous,
+                    is_published:
+                      checked === true,
+                  }))
                 }
               />
 
-              <div>
-                <Label htmlFor="is_published">
-                  Publish this service
-                </Label>
-
-                <p className="text-xs text-muted-foreground">
-                  Published services appear on the client website.
-                </p>
-              </div>
-            </div>
-
-            {/* Error */}
-            {error && (
-              <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
-                <p className="text-sm text-destructive">
-                  {error}
-                </p>
-              </div>
-            )}
-
-            {/* Actions */}
-            <div className="flex gap-3">
-              <Button
-                type="submit"
-                disabled={saving}
-                className="gap-2"
+              <Label
+                htmlFor="is_published"
+                className="cursor-pointer"
               >
-                {saving ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Save className="h-4 w-4" />
-                )}
-
-                {saving ? 'Saving...' : 'Save Service'}
-              </Button>
-
-              <Button
-                type="button"
-                variant="outline"
-                disabled={saving}
-                onClick={() => router.push('/admin/services')}
-              >
-                Cancel
-              </Button>
+                Publish this service on the website
+              </Label>
             </div>
-
           </CardContent>
         </Card>
+
+        {error && (
+          <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4">
+            <p className="text-sm text-destructive">
+              {error}
+            </p>
+          </div>
+        )}
+
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <Link href="/admin/services">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full sm:w-auto"
+            >
+              Cancel
+            </Button>
+          </Link>
+
+          <Button
+            type="submit"
+            disabled={saving}
+            className="gap-2 w-full sm:w-auto"
+          >
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
+
+            {saving
+              ? 'Saving...'
+              : 'Save Service'}
+          </Button>
+        </div>
       </form>
     </div>
   );

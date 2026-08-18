@@ -1,28 +1,74 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { use, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Save, ArrowLeft, Loader2 } from 'lucide-react';
+import {
+  ArrowLeft,
+  Loader2,
+  Save,
+  Trash2,
+} from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+
 import { supabase } from '@/lib/supabase';
 
-function slugify(text: string) {
-  return text
+function slugify(value: string): string {
+  return value
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '');
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
-export default function EditCaseStudyPage({ params }: { params: Promise<{ id: string }> }) {
+type CaseStudy = {
+  id: string;
+  title: string;
+  slug: string;
+  client: string;
+  industry: string;
+  challenge: string;
+  solution: string;
+  results: string;
+  metrics: string;
+  is_published: boolean;
+  is_featured: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+type PageProps = {
+  params: Promise<{
+    id: string;
+  }>;
+};
+
+export default function EditCaseStudyPage({
+  params,
+}: PageProps) {
+  const { id } = use(params);
+
   const router = useRouter();
-  const [id, setId] = useState<string>('');
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
   const [error, setError] = useState('');
 
   const [form, setForm] = useState({
@@ -39,212 +85,516 @@ export default function EditCaseStudyPage({ params }: { params: Promise<{ id: st
   });
 
   useEffect(() => {
-    params.then((resolved) => {
-      setId(resolved.id);
-    });
-  }, [params]);
-
-  useEffect(() => {
     if (!id) return;
-    (async () => {
-      const { data } = await supabase
+
+    const loadCaseStudy = async () => {
+      setLoading(true);
+      setError('');
+
+      const {
+        data,
+        error: fetchError,
+      } = await supabase
         .from('case_studies')
         .select('*')
         .eq('id', id)
         .maybeSingle();
-      if (data) {
-        setForm({
-          title: data.title || '',
-          slug: data.slug || '',
-          client: data.client || '',
-          industry: data.industry || '',
-          challenge: data.challenge || '',
-          solution: data.solution || '',
-          results: data.results || '',
-          metrics: data.metrics || '',
-          is_published: data.is_published || false,
-          is_featured: data.is_featured || false,
-        });
+
+      if (fetchError) {
+        console.error(
+          'Error loading case study:',
+          fetchError
+        );
+
+        setError(fetchError.message);
+        setLoading(false);
+        return;
       }
+
+      if (!data) {
+        setError('Case study not found.');
+        setLoading(false);
+        return;
+      }
+
+      const caseStudy = data as CaseStudy;
+
+      setForm({
+        title: caseStudy.title ?? '',
+        slug: caseStudy.slug ?? '',
+        client: caseStudy.client ?? '',
+        industry: caseStudy.industry ?? '',
+        challenge: caseStudy.challenge ?? '',
+        solution: caseStudy.solution ?? '',
+        results: caseStudy.results ?? '',
+        metrics: caseStudy.metrics ?? '',
+        is_published:
+          caseStudy.is_published ?? false,
+        is_featured:
+          caseStudy.is_featured ?? false,
+      });
+
       setLoading(false);
-    })();
-  }, [id]);
-
-  const handleSubmit = async (e: React.FormEvent, publishStatus?: boolean) => {
-    e.preventDefault();
-    setSaving(true);
-    setError('');
-
-    const slug = form.slug || slugify(form.title);
-
-    const payload = {
-      title: form.title,
-      slug,
-      client: form.client,
-      industry: form.industry,
-      challenge: form.challenge,
-      solution: form.solution,
-      results: form.results,
-      metrics: form.metrics,
-      is_published: publishStatus !== undefined ? publishStatus : form.is_published,
-      is_featured: form.is_featured,
-      updated_at: new Date().toISOString(),
     };
 
-    const { error: updateError } = await supabase.from('case_studies').update(payload).eq('id', id);
+    loadCaseStudy();
+  }, [id]);
+
+  const handleTitleChange = (
+    value: string
+  ) => {
+    setForm((current) => ({
+      ...current,
+      title: value,
+      slug: slugify(value),
+    }));
+  };
+
+  const handleSubmit = async (
+    event: React.FormEvent
+  ) => {
+    event.preventDefault();
+
+    setError('');
+
+    if (!form.title.trim()) {
+      setError(
+        'Please enter a case study title.'
+      );
+      return;
+    }
+
+    if (!form.client.trim()) {
+      setError(
+        'Please enter the client name.'
+      );
+      return;
+    }
+
+    if (!form.industry.trim()) {
+      setError(
+        'Please enter the industry.'
+      );
+      return;
+    }
+
+    if (!form.challenge.trim()) {
+      setError(
+        'Please describe the challenge.'
+      );
+      return;
+    }
+
+    if (!form.solution.trim()) {
+      setError(
+        'Please describe the solution.'
+      );
+      return;
+    }
+
+    if (!form.results.trim()) {
+      setError(
+        'Please enter the results.'
+      );
+      return;
+    }
+
+    const generatedSlug =
+      slugify(form.title);
+
+    if (!generatedSlug) {
+      setError(
+        'Unable to generate a valid URL slug from the title.'
+      );
+      return;
+    }
+
+    setSaving(true);
+
+    const {
+      error: updateError,
+    } = await supabase
+      .from('case_studies')
+      .update({
+        title: form.title.trim(),
+        slug: generatedSlug,
+        client: form.client.trim(),
+        industry: form.industry.trim(),
+        challenge: form.challenge.trim(),
+        solution: form.solution.trim(),
+        results: form.results.trim(),
+        metrics: form.metrics.trim(),
+        is_published:
+          form.is_published,
+        is_featured:
+          form.is_featured,
+      })
+      .eq('id', id);
+
     if (updateError) {
+      console.error(
+        'Error updating case study:',
+        updateError
+      );
+
       setError(updateError.message);
       setSaving(false);
       return;
     }
 
     router.push('/admin/case-studies');
+    router.refresh();
+  };
+
+  const handleDelete = async () => {
+    const confirmed =
+      window.confirm(
+        'Are you sure you want to permanently delete this case study?'
+      );
+
+    if (!confirmed) return;
+
+    setDeleting(true);
+    setError('');
+
+    const {
+      error: deleteError,
+    } = await supabase
+      .from('case_studies')
+      .delete()
+      .eq('id', id);
+
+    if (deleteError) {
+      console.error(
+        'Error deleting case study:',
+        deleteError
+      );
+
+      setError(deleteError.message);
+      setDeleting(false);
+      return;
+    }
+
+    router.push('/admin/case-studies');
+    router.refresh();
   };
 
   if (loading) {
-    return <div className="animate-pulse text-muted-foreground">Loading case study...</div>;
+    return (
+      <div className="flex min-h-[300px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-6 max-w-4xl">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => router.push('/admin/case-studies')}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <h1 className="font-display text-2xl font-bold tracking-tight">Edit Case Study</h1>
+    <div className="max-w-4xl space-y-6">
+      <div className="flex items-center gap-3">
+        <Link href="/admin/case-studies">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            aria-label="Back to case studies"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        </Link>
+
+        <div>
+          <h1 className="font-display text-2xl font-bold tracking-tight">
+            Edit Case Study
+          </h1>
+
+          <p className="mt-1 text-muted-foreground">
+            Update this client success story.
+          </p>
+        </div>
       </div>
 
-      <form onSubmit={(e) => handleSubmit(e)} className="space-y-6">
-        <Card className="border-border/60">
-          <CardContent className="pt-6 space-y-4">
+      <Card className="border-border/60">
+        <CardHeader>
+          <CardTitle>
+            Case Study Details
+          </CardTitle>
+        </CardHeader>
+
+        <CardContent>
+          <form
+            onSubmit={handleSubmit}
+            className="space-y-6"
+          >
             <div className="space-y-2">
-              <Label htmlFor="title">Title *</Label>
+              <Label htmlFor="title">
+                Title
+              </Label>
+
               <Input
                 id="title"
-                required
                 value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value, slug: form.slug || slugify(e.target.value) })}
-                placeholder="How We Increased Sales by 40% in 6 Months"
+                onChange={(event) =>
+                  handleTitleChange(
+                    event.target.value
+                  )
+                }
+                required
               />
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
+
+            <div className="space-y-2">
+              <Label htmlFor="slug">
+                URL Slug
+              </Label>
+
+              <Input
+                id="slug"
+                value={form.slug}
+                readOnly
+                className="bg-muted"
+              />
+
+              <p className="text-xs text-muted-foreground">
+                Automatically generated from the
+                full case study title.
+              </p>
+            </div>
+
+            <div className="grid gap-6 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="slug">URL Slug</Label>
-                <Input
-                  id="slug"
-                  value={form.slug}
-                  onChange={(e) => setForm({ ...form, slug: e.target.value })}
-                  placeholder="increased-sales-40-percent"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="client">Client Name *</Label>
+                <Label htmlFor="client">
+                  Client
+                </Label>
+
                 <Input
                   id="client"
-                  required
                   value={form.client}
-                  onChange={(e) => setForm({ ...form, client: e.target.value })}
-                  placeholder="Acme Corporation"
+                  onChange={(event) =>
+                    setForm({
+                      ...form,
+                      client:
+                        event.target.value,
+                    })
+                  }
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="industry">
+                  Industry
+                </Label>
+
+                <Input
+                  id="industry"
+                  value={form.industry}
+                  onChange={(event) =>
+                    setForm({
+                      ...form,
+                      industry:
+                        event.target.value,
+                    })
+                  }
+                  required
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="industry">Industry *</Label>
-              <Input
-                id="industry"
-                required
-                value={form.industry}
-                onChange={(e) => setForm({ ...form, industry: e.target.value })}
-                placeholder="Technology"
-              />
-            </div>
-          </CardContent>
-        </Card>
 
-        <Card className="border-border/60">
-          <CardContent className="pt-6 space-y-4">
-            <h3 className="font-display font-semibold">Case Study Details</h3>
             <div className="space-y-2">
-              <Label htmlFor="challenge">Challenge *</Label>
+              <Label htmlFor="challenge">
+                Challenge
+              </Label>
+
               <Textarea
                 id="challenge"
-                required
-                rows={4}
                 value={form.challenge}
-                onChange={(e) => setForm({ ...form, challenge: e.target.value })}
-                placeholder="Describe the client's problem and challenges..."
+                onChange={(event) =>
+                  setForm({
+                    ...form,
+                    challenge:
+                      event.target.value,
+                  })
+                }
+                rows={6}
+                required
               />
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="solution">Solution *</Label>
+              <Label htmlFor="solution">
+                Solution
+              </Label>
+
               <Textarea
                 id="solution"
-                required
-                rows={4}
                 value={form.solution}
-                onChange={(e) => setForm({ ...form, solution: e.target.value })}
-                placeholder="Describe the solution and approach we took..."
+                onChange={(event) =>
+                  setForm({
+                    ...form,
+                    solution:
+                      event.target.value,
+                  })
+                }
+                rows={6}
+                required
               />
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="results">Results *</Label>
+              <Label htmlFor="results">
+                Results
+              </Label>
+
               <Textarea
                 id="results"
-                required
-                rows={4}
                 value={form.results}
-                onChange={(e) => setForm({ ...form, results: e.target.value })}
-                placeholder="Describe the outcomes and results achieved..."
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="metrics">Key Metrics *</Label>
-              <Input
-                id="metrics"
+                onChange={(event) =>
+                  setForm({
+                    ...form,
+                    results:
+                      event.target.value,
+                  })
+                }
+                rows={6}
                 required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="metrics">
+                Metrics
+              </Label>
+
+              <Textarea
+                id="metrics"
                 value={form.metrics}
-                onChange={(e) => setForm({ ...form, metrics: e.target.value })}
-                placeholder="40% revenue growth, 25% cost reduction, etc."
+                onChange={(event) =>
+                  setForm({
+                    ...form,
+                    metrics:
+                      event.target.value,
+                  })
+                }
+                rows={4}
               />
             </div>
-          </CardContent>
-        </Card>
 
-        <Card className="border-border/60">
-          <CardContent className="pt-6 space-y-4">
-            <h3 className="font-display font-semibold">Publishing Options</h3>
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="featured"
-                checked={form.is_featured}
-                onCheckedChange={(v) => setForm({ ...form, is_featured: v === true })}
-              />
-              <Label htmlFor="featured">Feature this case study</Label>
+            <div className="space-y-4 rounded-xl border border-border/60 p-4">
+              <div className="flex items-center gap-3">
+                <Checkbox
+                  id="published"
+                  checked={
+                    form.is_published
+                  }
+                  onCheckedChange={(
+                    value
+                  ) =>
+                    setForm({
+                      ...form,
+                      is_published:
+                        value === true,
+                    })
+                  }
+                />
+
+                <Label
+                  htmlFor="published"
+                  className="cursor-pointer"
+                >
+                  Publish this case study
+                </Label>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Checkbox
+                  id="featured"
+                  checked={
+                    form.is_featured
+                  }
+                  onCheckedChange={(
+                    value
+                  ) =>
+                    setForm({
+                      ...form,
+                      is_featured:
+                        value === true,
+                    })
+                  }
+                />
+
+                <Label
+                  htmlFor="featured"
+                  className="cursor-pointer"
+                >
+                  Feature this case study
+                </Label>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="published"
-                checked={form.is_published}
-                onCheckedChange={(v) => setForm({ ...form, is_published: v === true })}
-              />
-              <Label htmlFor="published">Publish immediately</Label>
+
+            {error && (
+              <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3">
+                <p className="text-sm text-destructive">
+                  {error}
+                </p>
+              </div>
+            )}
+
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={
+                  deleting || saving
+                }
+                className="gap-2"
+              >
+                {deleting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
+
+                {deleting
+                  ? 'Deleting...'
+                  : 'Delete Case Study'}
+              </Button>
+
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <Link href="/admin/case-studies">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={
+                      saving || deleting
+                    }
+                    className="w-full sm:w-auto"
+                  >
+                    Cancel
+                  </Button>
+                </Link>
+
+                <Button
+                  type="submit"
+                  disabled={
+                    saving || deleting
+                  }
+                  className="gap-2"
+                >
+                  {saving ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+
+                  {saving
+                    ? 'Saving...'
+                    : 'Save Changes'}
+                </Button>
+              </div>
             </div>
-          </CardContent>
-        </Card>
-
-        {error && <p className="text-sm text-destructive">{error}</p>}
-
-        <div className="flex gap-3">
-          <Button type="button" variant="outline" onClick={() => handleSubmit({ preventDefault: () => {} } as React.FormEvent, false)} disabled={saving}>
-            {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-            Save as Draft
-          </Button>
-          <Button type="submit" disabled={saving}>
-            {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-            Update & Publish
-          </Button>
-        </div>
-      </form>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -1,3 +1,9 @@
+// lib/data.ts
+
+/* =========================================================
+   SERVICES
+========================================================= */
+
 export type Service = {
   slug: string;
   title: string;
@@ -109,7 +115,14 @@ export const services: Service[] = [
   },
 ];
 
-export type Industry = { name: string; icon: string };
+/* =========================================================
+   INDUSTRIES
+========================================================= */
+
+export type Industry = {
+  name: string;
+  icon: string;
+};
 
 export const industries: Industry[] = [
   { name: 'Retail', icon: 'ShoppingBag' },
@@ -125,6 +138,10 @@ export const industries: Industry[] = [
   { name: 'Logistics', icon: 'Truck' },
   { name: 'Professional Services', icon: 'Briefcase' },
 ];
+
+/* =========================================================
+   CONSULTING PROCESS
+========================================================= */
 
 export type ProcessStep = {
   step: number;
@@ -171,54 +188,97 @@ export const processSteps: ProcessStep[] = [
   },
 ];
 
-export type Reason = { title: string; description: string; icon: string };
+/* =========================================================
+   WHY SALESWAY
+========================================================= */
+
+export type Reason = {
+  title: string;
+  description: string;
+  icon: string;
+};
 
 export const reasons: Reason[] = [
   {
     title: 'Practical Solutions',
-    description: 'No fluff, no jargon. Just actionable strategies your team can implement immediately.',
+    description:
+      'No fluff, no jargon. Just actionable strategies your team can implement immediately.',
     icon: 'Wrench',
   },
   {
     title: 'Data-Driven Strategies',
-    description: 'Every recommendation is backed by data, not guesswork or generic templates.',
+    description:
+      'Every recommendation is backed by data, not guesswork or generic templates.',
     icon: 'BarChart3',
   },
   {
     title: 'Hands-On Implementation',
-    description: 'We stay alongside you through execution until measurable results are achieved.',
+    description:
+      'We stay alongside you through execution until measurable results are achieved.',
     icon: 'Handshake',
   },
   {
     title: 'Tailored Consulting',
-    description: 'Every engagement is customized to your business, industry, and stage of growth.',
+    description:
+      'Every engagement is customized to your business, industry, and stage of growth.',
     icon: 'Scissors',
   },
   {
     title: 'Transparent Communication',
-    description: 'Clear expectations, honest feedback, and no surprises — ever.',
+    description:
+      'Clear expectations, honest feedback, and no surprises — ever.',
     icon: 'MessageSquare',
   },
   {
     title: 'Sustainable Growth',
-    description: 'We build systems that keep delivering long after our engagement ends.',
+    description:
+      'We build systems that keep delivering long after our engagement ends.',
     icon: 'TrendingUp',
   },
   {
     title: 'Measurable ROI',
-    description: 'If it does not move the needle, we do not recommend it. Results you can see.',
+    description:
+      'If it does not move the needle, we do not recommend it. Results you can see.',
     icon: 'BadgePercent',
   },
 ];
 
-export type Stat = { value: number; suffix: string; label: string };
+/* =========================================================
+   BUSINESS STATISTICS
+========================================================= */
+
+export type Stat = {
+  value: number;
+  suffix: string;
+  label: string;
+};
 
 export const stats: Stat[] = [
-  { value: 120, suffix: '+', label: 'Businesses Served' },
-  { value: 40, suffix: '%', label: 'Avg. Sales Growth Achieved' },
-  { value: 98, suffix: '%', label: 'Client Satisfaction' },
-  { value: 12, suffix: '+', label: 'Years of Experience' },
+  {
+    value: 120,
+    suffix: '+',
+    label: 'Businesses Served',
+  },
+  {
+    value: 40,
+    suffix: '%',
+    label: 'Avg. Sales Growth Achieved',
+  },
+  {
+    value: 98,
+    suffix: '%',
+    label: 'Client Satisfaction',
+  },
+  {
+    value: 12,
+    suffix: '+',
+    label: 'Years of Experience',
+  },
 ];
+
+/* =========================================================
+   BLOG
+========================================================= */
 
 export const blogCategories = [
   'Sales',
@@ -249,7 +309,8 @@ export const fallbackBlogPosts: BlogPostSummary[] = [
   {
     id: 'fb-1',
     slug: '5-sales-mistakes-costing-you-revenue',
-    title: '5 Sales Mistakes Costing You Revenue (And How to Fix Them)',
+    title:
+      '5 Sales Mistakes Costing You Revenue (And How to Fix Them)',
     excerpt:
       'Most businesses lose revenue not because their product is bad, but because of avoidable mistakes in their sales process. Here are the five most common ones and exactly how to fix each.',
     category: 'Sales',
@@ -261,9 +322,10 @@ export const fallbackBlogPosts: BlogPostSummary[] = [
   {
     id: 'fb-2',
     slug: 'how-to-build-a-marketing-funnel-that-converts',
-    title: 'How to Build a Marketing Funnel That Actually Converts',
+    title:
+      'How to Build a Marketing Funnel That Actually Converts',
     excerpt:
-      'Clicks don\'t pay the bills — conversions do. Learn how to build a marketing funnel that turns curious visitors into paying customers, step by step.',
+      "Clicks don't pay the bills — conversions do. Learn how to build a marketing funnel that turns curious visitors into paying customers, step by step.",
     category: 'Marketing',
     tags: ['marketing', 'funnels', 'lead-generation'],
     reading_minutes: 5,
@@ -275,7 +337,7 @@ export const fallbackBlogPosts: BlogPostSummary[] = [
     slug: 'the-founders-guide-to-strategic-planning',
     title: "The Founder's Guide to Strategic Planning",
     excerpt:
-      'A clear strategy makes every decision easier. This guide walks you through a practical framework for building a strategic plan you\'ll actually use.',
+      "A clear strategy makes every decision easier. This guide walks you through a practical framework for building a strategic plan you'll actually use.",
     category: 'Business Strategy',
     tags: ['strategy', 'planning', 'leadership'],
     reading_minutes: 5,
@@ -289,7 +351,10 @@ export type BlogPostDetail = BlogPostSummary & {
   author_name: string;
 };
 
-export const fallbackBlogPostDetails: Record<string, BlogPostDetail> = {
+export const fallbackBlogPostDetails: Record<
+  string,
+  BlogPostDetail
+> = {
   '5-sales-mistakes-costing-you-revenue': {
     ...fallbackBlogPosts[0],
     content: `## Mistake #1: No Defined Sales Process
@@ -323,6 +388,7 @@ If you can't measure it, you can't improve it. Most businesses track revenue but
 **Fix:** Track leading indicators: calls made, meetings booked, proposals sent, conversion rates at each stage.`,
     author_name: 'Rachel Waithera',
   },
+
   'how-to-build-a-marketing-funnel-that-converts': {
     ...fallbackBlogPosts[1],
     content: `## What Is a Marketing Funnel?
@@ -342,7 +408,7 @@ This is where people first discover you. The goal is reach, not conversion.
 
 Now they know you exist. Give them a reason to engage further.
 
-- Lead magnets (checklists, templates, guides)
+- Lead magnets
 - Email newsletter signup
 - Webinars and free workshops
 
@@ -356,7 +422,7 @@ They're considering buying. This is where you build trust and remove friction.
 
 ## Step 4: Action
 
-Make it absurdly easy to buy.
+Make it easy to buy.
 
 - Simple checkout process
 - Multiple payment options
@@ -367,6 +433,7 @@ Make it absurdly easy to buy.
 Track conversion rates at each step. Fix the biggest leak first, then the next. That's how you build a funnel that actually converts.`,
     author_name: 'Rachel Waithera',
   },
+
   'the-founders-guide-to-strategic-planning': {
     ...fallbackBlogPosts[2],
     content: `## Why Most Strategic Plans Fail
@@ -404,6 +471,10 @@ A simple plan executed consistently beats a brilliant plan that never gets imple
   },
 };
 
+/* =========================================================
+   RESOURCES
+========================================================= */
+
 export type ResourceSummary = {
   id: string;
   title: string;
@@ -420,8 +491,10 @@ export const fallbackResources: ResourceSummary[] = [
     id: 'fr-1',
     title: 'Business Growth Checklist',
     slug: 'business-growth-checklist',
-    description: 'A comprehensive checklist to assess your business across sales, marketing, operations, and strategy. Identify gaps and prioritize growth initiatives.',
-    details: 'Use this checklist to score the strength of your growth plan, identify priorities, and create a simple next-step roadmap that moves your business faster.',
+    description:
+      'A comprehensive checklist to assess your business across sales, marketing, operations, and strategy. Identify gaps and prioritize growth initiatives.',
+    details:
+      'Use this checklist to score the strength of your growth plan, identify priorities, and create a simple next-step roadmap that moves your business faster.',
     category: 'Strategy',
     requires_email: true,
   },
@@ -429,8 +502,10 @@ export const fallbackResources: ResourceSummary[] = [
     id: 'fr-2',
     title: 'Sales Audit Template',
     slug: 'sales-audit-template',
-    description: 'A step-by-step template to audit your current sales process, identify bottlenecks, and create an action plan to improve conversion rates.',
-    details: 'Evaluate your sales stages, qualification rules, pipeline handoffs, and follow-up cadence so you can fix the biggest conversion leaks first.',
+    description:
+      'A step-by-step template to audit your current sales process, identify bottlenecks, and create an action plan to improve conversion rates.',
+    details:
+      'Evaluate your sales stages, qualification rules, pipeline handoffs, and follow-up cadence so you can fix the biggest conversion leaks first.',
     category: 'Sales',
     requires_email: true,
   },
@@ -438,8 +513,10 @@ export const fallbackResources: ResourceSummary[] = [
     id: 'fr-3',
     title: 'Marketing Planning Guide',
     slug: 'marketing-planning-guide',
-    description: 'Plan your marketing with confidence. This guide covers channels, budgeting, messaging, and measurement frameworks.',
-    details: 'Use this guide to define the channels that matter most, set a simple budget, and measure what actually moves your sales pipeline.',
+    description:
+      'Plan your marketing with confidence. This guide covers channels, budgeting, messaging, and measurement frameworks.',
+    details:
+      'Use this guide to define the channels that matter most, set a simple budget, and measure what actually moves your sales pipeline.',
     category: 'Marketing',
     requires_email: true,
   },
@@ -447,8 +524,10 @@ export const fallbackResources: ResourceSummary[] = [
     id: 'fr-4',
     title: 'Business Strategy Workbook',
     slug: 'business-strategy-workbook',
-    description: 'A practical workbook to help you define your vision, set priorities, and build a 12-month action plan you can actually execute.',
-    details: 'This workbook walks you through choosing the right focus areas, setting measurable goals, and creating accountability for the quarter ahead.',
+    description:
+      'A practical workbook to help you define your vision, set priorities, and build a 12-month action plan you can actually execute.',
+    details:
+      'This workbook walks you through choosing the right focus areas, setting measurable goals, and creating accountability for the quarter ahead.',
     category: 'Strategy',
     requires_email: true,
   },
@@ -456,12 +535,80 @@ export const fallbackResources: ResourceSummary[] = [
     id: 'fr-5',
     title: 'Free eBook: The Growth Playbook',
     slug: 'growth-playbook-ebook',
-    description: 'Our flagship eBook covering the 7 proven frameworks for growing any business smarter, faster, and more profitably.',
-    details: 'Inside the playbook, you’ll find practical growth frameworks, examples, and priority-setting guidance for every stage of your business.',
+    description:
+      'Our flagship eBook covering the 7 proven frameworks for growing any business smarter, faster, and more profitably.',
+    details:
+      'Inside the playbook, you’ll find practical growth frameworks, examples, and priority-setting guidance for every stage of your business.',
     category: 'eBook',
     requires_email: true,
   },
 ];
+
+/* =========================================================
+   CAREERS / JOBS
+========================================================= */
+
+export type Job = {
+  id: string;
+  title: string;
+  department: string;
+  location: string;
+  type: string;
+  salary_range: string;
+  description: string;
+  requirements: string;
+  is_published: boolean;
+  created_at: string;
+};
+
+export const fallbackJobs: Job[] = [
+  {
+    id: 'fallback-sales-consultant',
+    title: 'Sales Consultant',
+    department: 'Sales & Consulting',
+    location: 'Nairobi, Kenya',
+    type: 'Full-time',
+    salary_range: 'Competitive',
+    description:
+      'Work with businesses to improve their sales processes, strengthen pipelines, increase conversions, and build predictable revenue systems.',
+    requirements:
+      'Strong communication and presentation skills.\nExperience in sales, business development, consulting, or a related field.\nAbility to work independently and collaboratively.\nStrong commercial awareness and problem-solving skills.',
+    is_published: true,
+    created_at: '2026-08-01T00:00:00Z',
+  },
+  {
+    id: 'fallback-business-development',
+    title: 'Business Development Executive',
+    department: 'Business Development',
+    location: 'Nairobi, Kenya',
+    type: 'Full-time',
+    salary_range: 'Competitive',
+    description:
+      'Identify new business opportunities, develop relationships with prospective clients, and support the growth of Salesway Consulting.',
+    requirements:
+      'Excellent interpersonal and communication skills.\nExperience in business development, sales, marketing, or client relationship management.\nAbility to identify opportunities and convert prospects into clients.\nStrong organizational skills.',
+    is_published: true,
+    created_at: '2026-08-02T00:00:00Z',
+  },
+  {
+    id: 'fallback-marketing',
+    title: 'Digital Marketing Specialist',
+    department: 'Marketing',
+    location: 'Nairobi, Kenya',
+    type: 'Full-time',
+    salary_range: 'Competitive',
+    description:
+      'Develop and execute digital marketing campaigns that generate awareness, qualified leads, and measurable business growth.',
+    requirements:
+      'Experience with digital marketing channels.\nStrong content creation and communication skills.\nUnderstanding of SEO, social media, email marketing, and analytics.\nCreative and analytical mindset.',
+    is_published: true,
+    created_at: '2026-08-03T00:00:00Z',
+  },
+];
+
+/* =========================================================
+   BUSINESS SIZES
+========================================================= */
 
 export const businessSizes = [
   'Solo / Freelancer',
@@ -470,6 +617,10 @@ export const businessSizes = [
   '51-200 employees',
   '200+ employees',
 ];
+
+/* =========================================================
+   SERVICE OPTIONS
+========================================================= */
 
 export const serviceOptions = [
   'Sales Strategy & Growth',
