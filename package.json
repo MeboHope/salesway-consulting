@@ -13,8 +13,6 @@
     "@hookform/resolvers": "^3.9.0",
     "@netlify/plugin-nextjs": "^5.15.13",
     "@next/env": "^16.3.0",
-    "@next/swc-wasm-nodejs": "^16.3.0",
-    "@next/swc-win32-x64-msvc": "^16.3.0",
     "@radix-ui/react-accordion": "^1.2.0",
     "@radix-ui/react-alert-dialog": "^1.1.1",
     "@radix-ui/react-aspect-ratio": "^1.1.0",
