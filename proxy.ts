@@ -16,7 +16,7 @@ const SUPER_ADMIN_EMAIL = (
   AUTHORIZED_ADMIN_EMAILS[0]
 ).trim().toLowerCase();
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   let response = NextResponse.next({
     request: {
       headers: req.headers,
