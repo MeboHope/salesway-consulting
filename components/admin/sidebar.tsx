@@ -230,7 +230,7 @@ export function AdminSidebar({
         onClick={() =>
           setMobileOpen(!mobileOpen)
         }
-        className="fixed left-4 top-20 z-50 rounded-lg border border-primary/10 bg-white p-2 shadow-md"
+        className="fixed left-4 top-20 z-50 rounded-lg border border-primary/10 bg-white p-2 shadow-md lg:hidden"
         aria-label="Toggle admin menu"
       >
         {mobileOpen ? (

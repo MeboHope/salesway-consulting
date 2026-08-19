@@ -28,13 +28,17 @@ type Application = {
   job_id: string;
   full_name: string;
   email: string;
-  phone: string | null;
+  phone: string;
   cover_letter: string | null;
-  cv_url: string | null;
-  qualification_url: string | null;
+  linkedin_url: string | null;
+  cv_file_path: string | null;
+  cv_file_name: string | null;
+  qualification_file_path: string | null;
+  qualification_file_name: string | null;
   status: string;
+  notes: string | null;
   created_at: string;
-  jobs?: Job | null;
+  updated_at: string;
 };
 
 const statusVariant = (
@@ -42,11 +46,12 @@ const statusVariant = (
 ) => {
   switch (status) {
     case 'shortlisted':
-      return 'default' as const;
     case 'hired':
       return 'default' as const;
+
     case 'rejected':
       return 'destructive' as const;
+
     default:
       return 'secondary' as const;
   }
@@ -55,6 +60,9 @@ const statusVariant = (
 export default function AdminJobApplicationsPage() {
   const [applications, setApplications] =
     useState<Application[]>([]);
+
+  const [jobs, setJobs] =
+    useState<Record<string, Job>>({});
 
   const [loading, setLoading] =
     useState(true);
@@ -69,21 +77,15 @@ export default function AdminJobApplicationsPage() {
     setLoading(true);
     setError('');
 
-    const { data, error: fetchError } =
-      await supabase
-        .from('job_applications')
-        .select(
-          `
-            *,
-            jobs (
-              id,
-              title
-            )
-          `
-        )
-        .order('created_at', {
-          ascending: false,
-        });
+    const {
+      data,
+      error: fetchError,
+    } = await supabase
+      .from('job_applications')
+      .select('*')
+      .order('created_at', {
+        ascending: false,
+      });
 
     if (fetchError) {
       console.error(
@@ -97,10 +99,50 @@ export default function AdminJobApplicationsPage() {
       );
 
       setApplications([]);
-    } else {
-      setApplications(
-        (data || []) as Application[]
+      setLoading(false);
+      return;
+    }
+
+    const applicationRows =
+      (data || []) as Application[];
+
+    setApplications(applicationRows);
+
+    const jobIds = Array.from(
+      new Set(
+        applicationRows
+          .map((item) => item.job_id)
+          .filter(Boolean)
+      )
+    );
+
+    if (jobIds.length > 0) {
+      const {
+        data: jobData,
+        error: jobError,
+      } = await supabase
+        .from('jobs')
+        .select('id, title')
+        .in('id', jobIds);
+
+      if (jobError) {
+        console.error(
+          'Error loading application careers:',
+          jobError
+        );
+      }
+
+      const jobMap: Record<string, Job> = {};
+
+      (jobData || []).forEach(
+        (job) => {
+          jobMap[job.id] = job;
+        }
       );
+
+      setJobs(jobMap);
+    } else {
+      setJobs({});
     }
 
     setLoading(false);
@@ -117,18 +159,22 @@ export default function AdminJobApplicationsPage() {
 
       if (!query) return true;
 
+      const careerTitle =
+        jobs[application.job_id]
+          ?.title || '';
+
       return (
         application.full_name
-          ?.toLowerCase()
+          .toLowerCase()
           .includes(query) ||
         application.email
-          ?.toLowerCase()
+          .toLowerCase()
           .includes(query) ||
         application.phone
-          ?.toLowerCase()
+          .toLowerCase()
           .includes(query) ||
-        application.jobs?.title
-          ?.toLowerCase()
+        careerTitle
+          .toLowerCase()
           .includes(query)
       );
     });
@@ -151,7 +197,7 @@ export default function AdminJobApplicationsPage() {
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 
         <Input
-          placeholder="Search applicants or positions..."
+          placeholder="Search applicants or careers..."
           value={search}
           onChange={(event) =>
             setSearch(event.target.value)
@@ -161,8 +207,8 @@ export default function AdminJobApplicationsPage() {
       </div>
 
       {error && (
-        <Card className="border-destructive/30">
-          <CardContent className="p-5">
+        <Card className="border-destructive/30 bg-destructive/5">
+          <CardContent className="p-4">
             <p className="text-sm text-destructive">
               {error}
             </p>
@@ -178,7 +224,6 @@ export default function AdminJobApplicationsPage() {
       ) : filtered.length === 0 ? (
         <Card className="border-border/60">
           <CardContent className="flex flex-col items-center py-14 text-center">
-
             <Briefcase className="h-12 w-12 text-muted-foreground/30" />
 
             <h2 className="mt-4 font-display text-lg font-semibold">
@@ -186,92 +231,101 @@ export default function AdminJobApplicationsPage() {
             </h2>
 
             <p className="mt-2 text-sm text-muted-foreground">
-              Applications submitted through the
-              careers section will appear here.
+              Applications submitted through
+              the careers section will appear
+              here.
             </p>
-
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-3">
 
-          {filtered.map((application) => (
-            <Card
-              key={application.id}
-              className="border-border/60"
-            >
-              <CardContent className="p-5">
+          {filtered.map((application) => {
+            const career =
+              jobs[application.job_id];
 
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            return (
+              <Card
+                key={application.id}
+                className="border-border/60"
+              >
+                <CardContent className="p-5">
 
-                  <div className="min-w-0">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
 
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="min-w-0">
 
-                      <Badge
-                        variant={statusVariant(
-                          application.status
-                        )}
-                      >
-                        {application.status ||
-                          'new'}
-                      </Badge>
+                      <div className="flex flex-wrap items-center gap-2">
 
-                      {application.jobs?.title && (
-                        <Badge variant="outline">
-                          {application.jobs.title}
+                        <Badge
+                          variant={statusVariant(
+                            application.status
+                          )}
+                        >
+                          {application.status ||
+                            'new'}
                         </Badge>
-                      )}
 
-                    </div>
+                        <Badge variant="outline">
+                          {career?.title ||
+                            'Career unavailable'}
+                        </Badge>
 
-                    <h3 className="mt-3 flex items-center gap-2 font-display font-semibold">
+                        {application.cv_file_path && (
+                          <Badge variant="secondary">
+                            CV
+                          </Badge>
+                        )}
 
-                      <User className="h-4 w-4 text-primary" />
+                        {application.qualification_file_path && (
+                          <Badge variant="secondary">
+                            Qualification
+                          </Badge>
+                        )}
 
-                      {application.full_name}
+                      </div>
 
-                    </h3>
+                      <h3 className="mt-3 flex items-center gap-2 font-display font-semibold">
+                        <User className="h-4 w-4 text-primary" />
+                        {application.full_name}
+                      </h3>
 
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {application.email}
-                    </p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {application.email}
+                      </p>
 
-                    {application.phone && (
                       <p className="text-sm text-muted-foreground">
                         {application.phone}
                       </p>
-                    )}
 
-                    <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <Calendar className="h-3.5 w-3.5" />
 
-                      <Calendar className="h-3.5 w-3.5" />
+                        {new Date(
+                          application.created_at
+                        ).toLocaleString()}
+                      </p>
 
-                      {new Date(
-                        application.created_at
-                      ).toLocaleString()}
+                    </div>
 
-                    </p>
+                    <Link
+                      href={`/admin/job-applications/${application.id}`}
+                    >
+                      <Button
+                        variant="outline"
+                        className="w-full gap-2 lg:w-auto"
+                      >
+                        <Eye className="h-4 w-4" />
+                        View Application
+                      </Button>
+                    </Link>
 
                   </div>
 
-                  <Link
-                    href={`/admin/job-applications/${application.id}`}
-                  >
-                    <Button
-                      variant="outline"
-                      className="w-full gap-2 lg:w-auto"
-                    >
-                      <Eye className="h-4 w-4" />
-                      View Application
-                    </Button>
-                  </Link>
-
-                </div>
-
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
 
         </div>
       )}

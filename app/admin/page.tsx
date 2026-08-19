@@ -19,6 +19,7 @@ import {
   Plus,
   AlertCircle,
   CheckCircle2,
+  Shield,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -111,6 +112,31 @@ const adminSections = [
     label: 'Subscribers',
     icon: Mail,
     description: 'Manage newsletter and email list subscribers.',
+  },
+  {
+    href: '/admin/job-applications',
+    label: 'Job Applications',
+    icon: FileText,
+    description: 'Review and manage job applications.',
+  },
+  {
+    href: '/admin/contact-messages',
+    label: 'Contact Messages',
+    icon: Mail,
+    description: 'View messages from the contact form.',
+  },
+  {
+    href: '/admin/settings',
+    label: 'Settings',
+    icon: Settings,
+    description: 'Configure site settings and preferences.',
+  },
+  {
+    href: '/admin/admins',
+    label: 'Admin Management',
+    icon: Shield,
+    description: 'Manage admin users and permissions.',
+    superAdminOnly: true,
   },
 ];
 
@@ -562,6 +588,11 @@ export default function AdminDashboardPage() {
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {adminSections.map((section) => {
                   const Icon = section.icon;
+
+                  // Hide super admin only sections for non-super admins
+                  if (section.superAdminOnly && !isSuperAdmin) {
+                    return null;
+                  }
 
                   return (
                     <Card
