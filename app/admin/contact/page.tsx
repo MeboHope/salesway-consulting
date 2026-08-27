@@ -1,22 +1,18 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import {
   Mail,
   Search,
   Trash2,
-  Eye,
+  Loader2,
   CheckCircle2,
   Clock,
 } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  Card,
-  CardContent,
-} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
 import { supabase } from '@/lib/supabase';
@@ -32,176 +28,95 @@ type ContactMessage = {
 };
 
 export default function AdminContactPage() {
-  const [messages, setMessages] =
-    useState<ContactMessage[]>([]);
-
-  const [loading, setLoading] =
-    useState(true);
-
-  const [search, setSearch] =
-    useState('');
-
-  const [error, setError] =
-    useState('');
-
-  useEffect(() => {
-    loadMessages();
-  }, []);
+  const [messages, setMessages] = useState<ContactMessage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [error, setError] = useState('');
 
   const loadMessages = async () => {
     setLoading(true);
     setError('');
 
-    const {
-      data,
-      error: fetchError,
-    } = await supabase
+    const { data, error: fetchError } = await supabase
       .from('contact_messages')
       .select(
         'id, name, email, subject, message, status, created_at'
       )
-      .order('created_at', {
-        ascending: false,
-      });
+      .order('created_at', { ascending: false });
 
     if (fetchError) {
       console.error(
         'Error loading contact messages:',
         fetchError
       );
-
-      setError(
-        fetchError.message ||
-          'Unable to load contact messages.'
-      );
-
+      setError(fetchError.message);
       setMessages([]);
     } else {
-      setMessages(
-        (data || []) as ContactMessage[]
-      );
+      setMessages((data || []) as ContactMessage[]);
     }
 
     setLoading(false);
   };
 
-  const handleDelete = async (
-    id: string
-  ) => {
-    const confirmed =
-      window.confirm(
-        'Are you sure you want to delete this contact message?'
-      );
+  useEffect(() => {
+    loadMessages();
+  }, []);
+
+  const handleMarkRead = async (id: string) => {
+    const { error: updateError } = await supabase
+      .from('contact_messages')
+      .update({ status: 'read' })
+      .eq('id', id);
+
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
+
+    await loadMessages();
+  };
+
+  const handleDelete = async (id: string) => {
+    const confirmed = window.confirm(
+      'Are you sure you want to permanently delete this message?'
+    );
 
     if (!confirmed) return;
 
-    const {
-      error: deleteError,
-    } = await supabase
+    const { error: deleteError } = await supabase
       .from('contact_messages')
       .delete()
       .eq('id', id);
 
     if (deleteError) {
-      setError(
-        deleteError.message ||
-          'Unable to delete message.'
-      );
+      setError(deleteError.message);
       return;
     }
 
-    setMessages((current) =>
-      current.filter(
-        (message) =>
-          message.id !== id
-      )
-    );
+    await loadMessages();
   };
 
-  const markAsRead = async (
-    id: string
-  ) => {
-    const {
-      error: updateError,
-    } = await supabase
-      .from('contact_messages')
-      .update({
-        status: 'read',
-      })
-      .eq('id', id);
+  const query = search.trim().toLowerCase();
 
-    if (updateError) {
-      setError(
-        updateError.message ||
-          'Unable to update message.'
-      );
-      return;
-    }
-
-    setMessages((current) =>
-      current.map((message) =>
-        message.id === id
-          ? {
-              ...message,
-              status: 'read',
-            }
-          : message
-      )
+  const filteredMessages = messages.filter((message) => {
+    return (
+      message.name.toLowerCase().includes(query) ||
+      message.email.toLowerCase().includes(query) ||
+      (message.subject || '').toLowerCase().includes(query) ||
+      message.message.toLowerCase().includes(query)
     );
-  };
-
-  const filteredMessages =
-    messages.filter((message) => {
-      const query =
-        search.toLowerCase();
-
-      return (
-        message.name
-          .toLowerCase()
-          .includes(query) ||
-        message.email
-          .toLowerCase()
-          .includes(query) ||
-        (message.subject || '')
-          .toLowerCase()
-          .includes(query) ||
-        message.message
-          .toLowerCase()
-          .includes(query)
-      );
-    });
-
-  const unreadCount =
-    messages.filter(
-      (message) =>
-        message.status === 'new'
-    ).length;
+  });
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight">
-            Contact Messages
-          </h1>
+      <div>
+        <h1 className="font-display text-2xl font-bold tracking-tight">
+          Contact Messages
+        </h1>
 
-          <p className="mt-1 text-muted-foreground">
-            Messages submitted through the
-            website contact form.
-          </p>
-        </div>
-
-        <Badge
-          variant={
-            unreadCount > 0
-              ? 'default'
-              : 'secondary'
-          }
-          className="w-fit gap-2"
-        >
-          <Mail className="h-3.5 w-3.5" />
-          {unreadCount} new
-        </Badge>
+        <p className="mt-1 text-muted-foreground">
+          Messages submitted through the public Contact Us form.
+        </p>
       </div>
 
       <div className="relative max-w-md">
@@ -210,150 +125,134 @@ export default function AdminContactPage() {
         <Input
           placeholder="Search messages..."
           value={search}
-          onChange={(event) =>
-            setSearch(event.target.value)
-          }
+          onChange={(event) => setSearch(event.target.value)}
           className="pl-10"
         />
       </div>
 
       {error && (
-        <Card className="border-destructive/30 bg-destructive/5">
-          <CardContent className="p-4">
-            <p className="text-sm text-destructive">
-              {error}
-            </p>
-          </CardContent>
-        </Card>
+        <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3">
+          <p className="text-sm text-destructive">{error}</p>
+        </div>
       )}
 
       {loading ? (
-        <div className="animate-pulse text-muted-foreground">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
           Loading contact messages...
         </div>
-      ) : filteredMessages.length ===
-        0 ? (
+      ) : filteredMessages.length === 0 ? (
         <Card className="border-border/60">
-          <CardContent className="p-10 text-center">
-            <Mail className="mx-auto h-12 w-12 text-muted-foreground/40" />
+          <CardContent className="flex flex-col items-center py-12 text-center">
+            <Mail className="h-12 w-12 text-muted-foreground/40" />
 
-            <h2 className="mt-4 font-display text-lg font-semibold">
-              No contact messages
-            </h2>
-
-            <p className="mt-2 text-sm text-muted-foreground">
-              Messages submitted through the
-              Contact Us form will appear here.
+            <p className="mt-4 text-muted-foreground">
+              {search
+                ? 'No messages match your search.'
+                : 'No contact messages yet.'}
             </p>
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-3">
-          {filteredMessages.map(
-            (message) => (
-              <Card
-                key={message.id}
-                className="border-border/60"
-              >
-                <CardContent className="p-5">
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="min-w-0 flex-1">
+        <div className="space-y-4">
+          {filteredMessages.map((message) => (
+            <Card
+              key={message.id}
+              className="border-border/60"
+            >
+              <CardContent className="p-5">
+                <div className="flex flex-col gap-5">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
                       <div className="flex flex-wrap items-center gap-2">
+                        <h2 className="font-semibold">
+                          {message.name}
+                        </h2>
+
                         <Badge
                           variant={
-                            message.status ===
-                            'new'
-                              ? 'default'
-                              : 'secondary'
+                            message.status === 'read'
+                              ? 'secondary'
+                              : 'default'
                           }
                         >
-                          {message.status ===
-                          'new'
-                            ? 'New'
-                            : 'Read'}
+                          {message.status === 'read' ? (
+                            <>
+                              <CheckCircle2 className="mr-1 h-3 w-3" />
+                              Read
+                            </>
+                          ) : (
+                            <>
+                              <Clock className="mr-1 h-3 w-3" />
+                              New
+                            </>
+                          )}
                         </Badge>
-
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(
-                            message.created_at
-                          ).toLocaleString()}
-                        </span>
                       </div>
-
-                      <h3 className="mt-3 font-display font-semibold">
-                        {message.name}
-                      </h3>
 
                       <a
                         href={`mailto:${message.email}`}
-                        className="text-sm text-primary hover:underline"
+                        className="mt-1 inline-block text-sm text-primary hover:underline"
                       >
                         {message.email}
                       </a>
 
-                      {message.subject && (
-                        <p className="mt-3 font-medium">
-                          {message.subject}
-                        </p>
-                      )}
-
-                      <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
-                        {message.message}
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {new Date(
+                          message.created_at
+                        ).toLocaleString()}
                       </p>
                     </div>
 
-                    <div className="flex shrink-0 gap-2">
-                      {message.status ===
-                        'new' && (
+                    <div className="flex gap-2">
+                      {message.status !== 'read' && (
                         <Button
-                          variant="ghost"
-                          size="icon"
+                          variant="outline"
+                          size="sm"
                           onClick={() =>
-                            markAsRead(
-                              message.id
-                            )
+                            handleMarkRead(message.id)
                           }
-                          aria-label="Mark as read"
-                          title="Mark as read"
                         >
-                          <CheckCircle2 className="h-4 w-4" />
+                          <CheckCircle2 className="mr-2 h-4 w-4" />
+                          Mark read
                         </Button>
                       )}
-
-                      <a
-                        href={`mailto:${message.email}?subject=${encodeURIComponent(
-                          `Re: ${
-                            message.subject ||
-                            'Your message to Salesway Consulting'
-                          }`
-                        )}`}
-                        aria-label="Reply"
-                        title="Reply"
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-md text-sm transition-colors hover:bg-muted"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </a>
 
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() =>
-                          handleDelete(
-                            message.id
-                          )
-                        }
-                        aria-label="Delete message"
                         title="Delete message"
-                        className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        onClick={() =>
+                          handleDelete(message.id)
+                        }
+                        className="text-destructive hover:text-destructive"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            )
-          )}
+
+                  {message.subject && (
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        Subject
+                      </p>
+
+                      <p className="mt-1 font-medium">
+                        {message.subject}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="rounded-xl border border-border/60 bg-muted/30 p-4">
+                    <p className="whitespace-pre-wrap text-sm leading-7">
+                      {message.message}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       )}
     </div>

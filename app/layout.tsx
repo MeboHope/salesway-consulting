@@ -3,7 +3,7 @@ import './globals.css';
 import type { Metadata } from 'next';
 
 import { ThemeProvider } from '@/components/theme-provider';
-import { AppShell } from '@/components/app-shell';
+import { SiteShell } from '@/components/site-shell';
 import { AuthProvider } from '@/lib/auth-context';
 
 export const metadata: Metadata = {
@@ -22,17 +22,17 @@ export default function RootLayout({
       lang="en"
       suppressHydrationWarning
     >
-      <body
-        className="min-h-screen bg-background text-foreground antialiased"
-        suppressHydrationWarning
-      >
+      <body className="min-h-screen bg-white text-foreground antialiased">
         <AuthProvider>
           <ThemeProvider
             attribute="class"
-            defaultTheme="system"
-            enableSystem
+            defaultTheme="light"
+            forcedTheme="light"
+            enableSystem={false}
           >
-            <AppShell>{children}</AppShell>
+            <SiteShell>
+              {children}
+            </SiteShell>
           </ThemeProvider>
         </AuthProvider>
       </body>
