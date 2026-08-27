@@ -67,7 +67,7 @@ const navItems = [
     icon: CalendarCheck,
   },
   {
-    href: '/admin/contact-messages',
+    href: '/admin/contact',
     label: 'Contact Messages',
     icon: Mail,
   },
